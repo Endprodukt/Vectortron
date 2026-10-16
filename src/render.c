@@ -1,6 +1,6 @@
 /* render.c — camera, arena, effects, HUD.
  *
- * The arena is drawn through one vp3d scene per frame: the floor, the walls,
+ * The arena is drawn through one vp3d scene per frame: the walls,
  * every robot and person, the shots and the debris. Solid things hide what is
  * behind them; the scene sends only what can be seen.
  */
@@ -15,9 +15,7 @@
 #define PI 3.14159265f
 
 static vp3d_view VIEW;
-static int FLOOR;
 
-void render_set_floor(int floor) { FLOOR = floor; }
 static vp3d_scene *SCENE;
 
 /* the camera, smoothed: what it looks at, from which side, how far */
@@ -290,7 +288,7 @@ void fx_player_dies(float x, float z)
 
 void fx_wave_start(float x, float z)
 {
-    for (int k = 0; k < 3; k++) fx_ring(x, z, ST()->wall, 2.2f + k * 0.8f, 60);
+    for (int k = 0; k < 2; k++) fx_ring(x, z, ST()->wall, 2.2f + k * 0.8f, 60);
 }
 
 void fx_fireworks(void)
@@ -543,47 +541,14 @@ static void color(vp_dvg *d, rgb c) { vp_color(d, c.r, c.g, c.b); }
 
 /* ---- the arena ----------------------------------------------------------- */
 
-#define TILES_X 10
-#define TILES_Z 8
 #define WALL_H  7.0f
-#define GRID_X  5           /* the grid floor: coarser than the tiles, for the beam */
-#define GRID_Z  4
 
 static void arena_into_scene(vp_dvg *d, double t)
 {
     const float x0 = ARENA_X0 - 4, x1 = ARENA_X1 + 4, z0 = ARENA_Z0 - 4, z1 = ARENA_Z1 + 4;
 
-    /* the floor: tiles with a gap between them, as in Robotron X; walked in
-     * a snake so the beam's jumps stay short */
-    const float tw = (x1 - x0) / TILES_X, td = (z1 - z0) / TILES_Z, gap = 1.6f;
-    /* the wave's floor color; it glows up when something flashes */
-    rgb fl = ST()->floor;
-    if (flash_time > 0) fl = mkrgb(fl.r + (255 - fl.r) / 3, fl.g + (255 - fl.g) / 3, fl.b + (255 - fl.b) / 3);
-    color(d, fl);
-    if (FLOOR == 1) {
-        const float gw = (x1 - x0) / GRID_X, gd = (z1 - z0) / GRID_Z;
-        for (int i = 1; i < GRID_X; i++) {
-            float x = x0 + i * gw;
-            if (i & 1) vp3d_scene_line(SCENE, vp_v3(x, 0, z0), vp_v3(x, 0, z1));
-            else       vp3d_scene_line(SCENE, vp_v3(x, 0, z1), vp_v3(x, 0, z0));
-        }
-        for (int j = 1; j < GRID_Z; j++) {
-            float z = z0 + j * gd;
-            if (j & 1) vp3d_scene_line(SCENE, vp_v3(x1, 0, z), vp_v3(x0, 0, z));
-            else       vp3d_scene_line(SCENE, vp_v3(x0, 0, z), vp_v3(x1, 0, z));
-        }
-    }
-    for (int j = 0; j < TILES_Z && FLOOR == 0; j++) {
-        for (int k = 0; k < TILES_X; k++) {
-            int i = (j & 1) ? TILES_X - 1 - k : k;
-            float ax = x0 + i * tw + gap, bx = x0 + (i + 1) * tw - gap;
-            float az = z0 + j * td + gap, bz = z0 + (j + 1) * td - gap;
-            vp3d_scene_line(SCENE, vp_v3(ax, 0, az), vp_v3(bx, 0, az));
-            vp3d_scene_line(SCENE, vp_v3(bx, 0, az), vp_v3(bx, 0, bz));
-            vp3d_scene_line(SCENE, vp_v3(bx, 0, bz), vp_v3(ax, 0, bz));
-            vp3d_scene_line(SCENE, vp_v3(ax, 0, bz), vp_v3(ax, 0, az));
-        }
-    }
+    /* no floor: a vector monitor has only so much beam time a frame, and a
+     * full wave takes it all (the tiles of Robotron X cost the most) */
 
     /* the border: a low magenta wall that flashes on events; solid, so the
      * near wall hides the feet of whoever stands behind it */
@@ -612,11 +577,10 @@ void render_wall_hud(vp_dvg *d, const world *w1, const world *w2, int players, i
     vp_vec3 right = vp_v3(1, 0, 0), up = vp_v3(0, 1, 0);
 
     if (players < 2) {
-        vp_color(d, 255, 40, 60);
-        font3d_text(d, &VIEW, "SCORE", vp_v3(x0, base, zb), right, up, h, FONT3D_LEFT);
+        /* the score alone, as the original shows it (a word costs 40 lines) */
         vp_color(d, 60, 120, 255);
         snprintf(buf, sizeof buf, "%d", w->score);
-        font3d_text(d, &VIEW, buf, vp_v3(x0 + h * 0.8f * 5.6f, base, zb), right, up, h, FONT3D_LEFT);
+        font3d_text(d, &VIEW, buf, vp_v3(x0, base, zb), right, up, h, FONT3D_LEFT);
     } else {
         const world *ws[2] = { w1, w2 };
         for (int p = 0; p < 2; p++) {
@@ -750,13 +714,15 @@ void render_world(vp_dvg *d, const world *w, double t)
         pose.flat_color = 0;
         pose.dim = 1;
         if (k < 1) {
-            /* materializing: tall and thin, settling into shape */
+            /* materializing: tall and thin, settling into shape (not too
+             * tall: the stretched lines cost the beam right when the arena
+             * is fullest) */
             if (w->transporter) {
                 pose.sxz = pose.sy = k;
                 pose.flat_color = (int)(t * 30) & 1;
             } else {
                 pose.sxz = 0.15f + 0.85f * k;
-                pose.sy = 1 + 5 * (1 - k);
+                pose.sy = 1 + 2.5f * (1 - k);
                 pose.flat_color = 1;
             }
             pose.dim = 0.4f + 0.6f * k;
@@ -828,7 +794,7 @@ void render_world(vp_dvg *d, const world *w, double t)
         pose.color = model_color(MDL_PLAYER);
         if (pu < 1) {
             pose.sxz = 0.2f + 0.8f * pu;
-            pose.sy = 1 + 4 * (1 - pu);
+            pose.sy = 1 + 2.5f * (1 - pu);
             pose.flat_color = 1;
             pose.color = hsv((float)t * 2, 0.5f, 1);
         }
@@ -944,7 +910,9 @@ void render_world(vp_dvg *d, const world *w, double t)
         float u = 1 - banner_time / banner_max;
         float grow = u < 0.25f ? u / 0.25f : 1 + (u - 0.25f) * 0.25f;
         float fade = u > 0.8f ? (1 - u) / 0.2f : 1;
-        for (int k = 3; k >= 0; k--) {
+        /* the echoes cost big lines right when the arena is fullest (a wave
+         * starting): two at FULL, one at LIGHT, none at OFF */
+        for (int k = lvl(2); k >= 0; k--) {
             float h = 260 * grow * (1 - k * 0.12f);
             rgb c = k ? rgb_scale(hsv((float)t * 2 + k * 0.15f, 0.9f, 1), 0.5f * fade)
                       : rgb_scale(banner_color, fade);

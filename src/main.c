@@ -46,6 +46,7 @@ static struct {
     unsigned   seed;
     int        autoplay;
     int        service_hold;    /* frames buttons 2 + 3 have been held together */
+    int        service_from;    /* the state the service menu was opened from: back to it */
     vp_game   *game;
 } G;
 
@@ -123,10 +124,6 @@ void game_apply_settings(void)
     G.credits.free_play = SET.free_play;
     screen_set(SET.size_x, SET.size_y, SET.pos_x, SET.pos_y);
     fx_set_level(SET.effects);
-    /* the tiled floor costs the beam a lot: a USB-DVG gets the grid */
-    int floor = SET.floor;
-    if (floor < 0) floor = vp_dvg_hardware(vp_game_output(G.game)) == VP_HW_USB_DVG ? 1 : 0;
-    render_set_floor(floor);
     vp_audio_set_master(vp_game_audio(G.game), SET.volume / 10.0f);
 }
 
@@ -252,8 +249,12 @@ static void update(vp_game *g, float dt)
     switch (G.state) {
     case S_SERVICE:
         if (service_update(g)) {
-            fx_clear();
-            goto_attract(A_TITLE);
+            if (G.service_from == S_PLAY) {
+                G.state = S_PLAY;       /* back into the paused game */
+            } else {
+                fx_clear();
+                goto_attract(A_TITLE);
+            }
         }
         break;
     case S_ATTRACT: {
@@ -266,6 +267,7 @@ static void update(vp_game *g, float dt)
         if (act_held(ACT_STRAFE) && act_held(ACT_CAMERA)) G.service_hold++; else G.service_hold = 0;
         if (mk.service || G.service_hold > 120) {
             G.service_hold = 0;
+            G.service_from = S_ATTRACT;
             G.state = S_SERVICE;
             vp_lamps_set(0);
             service_open();
@@ -288,9 +290,21 @@ static void update(vp_game *g, float dt)
         }
         break;
     }
-    case S_PLAY:
+    case S_PLAY: {
+        /* the service button pauses the game into the service menu (not the
+         * 2 + 3 chord: those are strafe and camera here) */
+        menu_keys mk;
+        bind_menu(&mk);
+        if (mk.service) {
+            G.service_from = S_PLAY;
+            G.state = S_SERVICE;
+            snd_stop_all();
+            service_open();
+            return;
+        }
         step_play(in);
         break;
+    }
     case S_INITIALS: {
         world *w = &G.pw[G.entry_player];
         if (vp_initials_update(&G.entry, in, dt)) {
@@ -522,11 +536,6 @@ int main(int argc, char **argv)
     desc.draw = draw;
     desc.shutdown = shutdown;
     desc.update_hz = 60;
-    desc.frame_hz = 40;
-    /* a full arena needs the time on the board; the owner picks the rate
-     * there (DISPLAY, REFRESH): more pictures a second flicker less but
-     * leave the beam less time for each */
-    settings_load();
-    desc.frame_hz_board = SET.refresh;
+    desc.frame_hz = 60;             /* on the board too: a vector monitor flickers below */
     return vp_run(&desc, argc, argv);
 }

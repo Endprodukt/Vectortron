@@ -63,6 +63,38 @@ Vectortron, geholt von https://github.com/endprodukt/vectortron (Branch
   Haare des Spielers DETAIL. Messung (Welle 9, Gitter, FULL): Linien 1.240 →
   950, Linienlänge 82.000 → 78.000, Leerweg 110.000 → 107.000. Insgesamt
   heute: Linien 2.200 → 950. Auf dem Automaten, dort noch nicht gespielt.
+- Sechste Runde:
+  - Servicemenü auch im Spiel: SERVICE/F2 hält das Spiel an und öffnet es;
+    BACK/EXIT führt ins angehaltene Spiel zurück (`G.service_from`). Die
+    Tastenkombination 2 + 3 bleibt dem Attract-Modus vorbehalten (im Spiel
+    sind das Strafe und Kamera).
+  - Modelle: Spheroid 2 Ringe à 8 statt 3 à 10, Kern DETAIL; Enforcer rotes
+    Band DETAIL; Quark grüne X-Linien DETAIL; Tank Luke DETAIL; Hulk
+    Antennenknopf DETAIL; Schneeflocke und „2084“ nur noch auf der Vorderseite
+    (Elektroden schauen immer zur Kamera). Banner-Echos (WAVE, WAVE CLEARED,
+    EXTRA MAN): 2 bei FULL, 1 bei LIGHT, 0 bei OFF (vorher immer 3).
+  - Messung Welle 9 (Gitter, FULL): 950 → 770 Linien. **Wellenstart Welle 13**
+    (35 Grunts, 8 Hulks, 25 Elektroden, 5 Spheroids): rund 2.900 Linien und
+    170.000 Einheiten Linienlänge – das ist der Fall, in dem der Monitor
+    flimmert; nach 10 s sind es rund 1.200.
+  - Auf dem Automaten, dort noch nicht gespielt.
+- Siebte Runde (Besitzer: 60 Hz fest, Boden raus, noch mehr sparen):
+  - 60 Hz fest, auch auf dem Board (`frame_hz = 60`); die Einstellung
+    `refresh` ist weg.
+  - Kein Boden mehr, weder Kacheln noch Gitter; die Einstellung `floor` und
+    die Menüzeile FLOOR sind weg (alte Einträge in `settings.txt` werden
+    ignoriert). Die Bodenfarbe der Wellen (`stage.floor`) ist jetzt ungenutzt.
+  - Elektroden sind flache Umrisse (Drahtmodell) statt Platten mit Dicke:
+    ein Quadrat 4 statt rund 9 Linien, bei 25 je Welle.
+  - Das Wort SCORE ist weg (nur die Zahl, wie im Original); Materialisieren
+    streckt auf 3,5-fach statt 6-fach (die Linienlänge am Wellenstart);
+    2 statt 3 Ringe beim Wellenstart.
+  - Messung Wellenstart Welle 13 (noch mit Gitter): 2.900 → 2.700 Linien,
+    Linienlänge 170.000 → 150.000. Auf dem Automaten, dort noch nicht gespielt.
+  - Marquee: das Bild des Besitzers (Williams-Stil, VECTORTRON 2084,
+    2000 x 449) ist `pkg/marquee.png`; das alte liegt in
+    `backup/marquee-old-2026-10-16.png`. Auf dem Automaten im Spielordner und
+    als `artwork/marquees/vectortron.png` fürs Menü.
 
 ## Behobene Fehler
 
@@ -80,9 +112,11 @@ Vectortron, geholt von https://github.com/endprodukt/vectortron (Branch
 - Unter Windows hat das Programm im Paket kein Ausführungsrecht; es wird nach
   dem Packen von Hand gesetzt (siehe RESUME.md). Gehört in ein Skript.
 - Bei voller Arena flimmerte es auf dem Automaten (Besitzer); nach den
-  Runden 4 und 5 dort noch nicht geprüft. Weitere Hebel, falls nötig: die
-  LOD-Entfernung (190) senken, Arme ganz weglassen in der Ferne, die Zahl
-  der Ringe/Teilchen weiter drücken. Auf dem Board selbst nicht gemessen
-  (`VP_STATS=1` über `run.sh`, nur mit Erlaubnis).
+  Runden 4 bis 7 dort noch nicht geprüft. Der Wellenstart (2.700 Linien) ist
+  der Maßstab; ein Grunt in der Ferne kostet rund 55 Linien (6 Kästen à 9
+  sichtbare Kanten), 35 davon je Welle. Übrige Hebel, alle sichtbar: Arme als
+  DETAIL (rund −650 Linien am Wellenstart), Hulks ohne Arme in der Ferne
+  (rund −150), Beine als ein Kasten in der Ferne (rund −300). Auf dem Board
+  selbst nicht gemessen (`VP_STATS=1` über `run.sh`, nur mit Erlaubnis).
 - `vt-sounds` schreibt die WAVs in voller Aussteuerung; als Ersatz nach
   `assets/sounds/` gelegt wären sie wieder so laut wie vorher.

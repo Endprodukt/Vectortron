@@ -11,8 +11,8 @@
 
 settings SET = {
     .free_play = 0, .lives = 3, .extra_man = 25000, .difficulty = 5, .two_players = 1, .attract_sound = 1,
-    .size_x = 100, .size_y = 100, .pos_x = 0, .pos_y = 0, .camera = 0, .floor = -1, .effects = 2,
-    .refresh = 40, .volume = 8,
+    .size_x = 100, .size_y = 100, .pos_x = 0, .pos_y = 0, .camera = 0, .effects = 2,
+    .volume = 8,
 };
 
 typedef struct { const char *key; int *value; int min, max; const char *note; } field;
@@ -29,9 +29,7 @@ static const field FIELDS[] = {
     { "pos_x",         &SET.pos_x,         -600, 600,  "picture offset right, board units" },
     { "pos_y",         &SET.pos_y,         -600, 600,  "picture offset up, board units" },
     { "camera",        &SET.camera,        0, 2,       "0 Robotron X, 1 arena, 2 classic overhead" },
-    { "floor",         &SET.floor,         -1, 2,      "-1 auto, 0 tiles, 1 grid, 2 none" },
     { "effects",       &SET.effects,       0, 2,       "0 off, 1 light, 2 full" },
-    { "refresh",       &SET.refresh,       30, 60,     "pictures a second on the board, at the next start" },
     { "volume",        &SET.volume,        0, 10,      "0..10" },
 };
 #define NFIELDS (int)(sizeof FIELDS / sizeof FIELDS[0])

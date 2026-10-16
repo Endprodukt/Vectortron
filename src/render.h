@@ -10,9 +10,6 @@
 
 void render_init(void);
 
-/* The floor: 0 tiles (Robotron X), 1 a grid of long lines (cheaper on the
- * beam), 2 none. */
-void render_set_floor(int floor);
 
 /* Effects, started by the rules. Positions in world units. */
 void fx_explode(float x, float y, float z, rgb color, float dirx, float dirz, int pieces, float size);

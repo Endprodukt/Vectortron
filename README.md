@@ -4,7 +4,7 @@ A 3D vector tribute to **Robotron: 2084** (Williams, 1982) for
 [VectorPie](https://github.com/Goldfinch2/VectorPie): a Raspberry Pi driving
 a real vector monitor through a USB-DVG or BeamForge, or a window on a PC.
 
-The look and the camera follow **Robotron X**: a tiled arena, robots and
+The look and the camera follow **Robotron X**: a flat arena, robots and
 humans as 3D models with hidden lines, a camera that follows the player and
 pans as they move, the score and men standing on the far wall. The game
 itself – the waves, the enemies, the speeds, the scores, the flow – follows
@@ -27,7 +27,7 @@ see [docs/robotron-rules.md](docs/robotron-rules.md).
   enforcers turn back into spheroids).
 * Waves "materialize" (brain waves beam in with the transporter), with the
   rushing rectangles between waves.
-* Every wave has its own colors (wall, floor, laser), in a cycle of ten like
+* Every wave has its own colors (wall, laser), in a cycle of ten like
   the original's wall colors; shots hitting the wall flash it.
 * Tempest 2000 style effects: plasma shots with spark trails and muzzle
   flashes, spark showers and floor shock waves on every hit, camera shake,
@@ -51,7 +51,7 @@ see [docs/robotron-rules.md](docs/robotron-rules.md).
 | Strafe (single stick) | hold button 2 (left Alt): keeps the facing |
 | Camera | button 3 (Space): Robotron X / arena / classic overhead |
 | Start | 1 / 2, coins 5 / 6, back to the menu: Esc |
-| Service menu | F2 (or SERVICE as bound), or hold buttons 2 + 3 for two seconds in the attract mode |
+| Service menu | F2 (or SERVICE as bound) at any time, a game pauses; in the attract mode also hold buttons 2 + 3 for two seconds |
 
 As on the original's two 8-way joysticks, moving and firing go 8 ways only
 (an analog stick counts past half travel), at most 4 shots at a time. Twin
@@ -79,7 +79,9 @@ playing blinking; each turn opens with PLAYER 1 / PLAYER 2 and GET READY.
 
 ## Service menu
 
-F2, or holding buttons 2 + 3 for two seconds in the attract mode, opens it.
+F2 (or the SERVICE button) opens it at any time; a running game pauses and
+goes on when the menu is left. In the attract mode holding buttons 2 + 3
+for two seconds opens it too.
 Up / down choose, left / right change, button 1 (or Return) selects, button 2
 (or Backspace) goes back. The arrow keys, Return, Backspace and the first
 joystick always work in it, whatever the bindings.
@@ -89,7 +91,7 @@ joystick always work in it, whatever the bindings.
   recommended), 2 player games on/off, attract mode sounds on/off.
 * **DISPLAY** – picture width and height (50–120 %), position left/right
   and down/up, over a test pattern (the board's edge, a grid, a circle that
-  is round when the picture is right); camera, floor, effects (off, light,
+  is round when the picture is right); camera, effects (off, light,
   full).
 * **CONTROLS** – every action, its two inputs, CLEAR (back to the
   cabinet's), RESET ALL TO THE CABINET.
@@ -101,10 +103,9 @@ Everything takes effect at once and is kept in `save/settings.txt` next to
 the executable (it can be edited by hand too). The picture size and
 position apply to everything drawn, the game's lines and the SDK's.
 
-The tiled floor costs the beam a lot: FLOOR AUTO picks the grid on a USB-DVG
-and the tiles on a BeamForge and in a window. On the board the picture runs
-at 30 Hz (`frame_hz_board`); the game logic always runs at 60 Hz, as the
-original. `VP_STATS=1` prints what a frame costs.
+There is no floor: a vector monitor has only so much beam time a frame,
+and a full wave takes it all. The picture runs at 60 Hz, on the board too,
+as the game logic. `VP_STATS=1` prints what a frame costs.
 
 ## Sounds
 

@@ -319,8 +319,10 @@ static void build_hulk(model *md)
     detail(colored(solid(md, pads), dark));
     vp3d_mesh *h = mesh_new();
     add_box(h, 0, 15.6f, 0.6f, 3.6f, 2.6f, 3.4f);              /* the small head */
-    add_box(h, 0, 19.4f, 0.6f, 1.0f, 1.0f, 1.0f);              /* the antenna's knob */
     solid(md, h);
+    vp3d_mesh *knob = mesh_new();
+    add_box(knob, 0, 19.4f, 0.6f, 1.0f, 1.0f, 1.0f);           /* the antenna's knob, up close */
+    detail(solid(md, knob));
     vp3d_mesh *ant = mesh_new();
     add_line(ant, 0, 16.9f, 0.6f, 0, 18.9f, 0.6f);
     add_part(md, mesh_done(ant, 40), A_NONE, vp_v3(0, 0, 0), VP3D_WIREFRAME);
@@ -440,15 +442,14 @@ static void build_mikey(model *md)
 
 static void build_spheroid(model *md)
 {
-    /* three rings turning round a glowing core */
+    /* two rings turning round a glowing core (the core only up close) */
     vp3d_mesh *m = mesh_new();
-    add_circle(m, 10, 5.4f, 0);
-    add_circle(m, 10, 5.4f, 1);
-    add_circle(m, 10, 5.4f, 2);
+    add_circle(m, 8, 5.4f, 0);
+    add_circle(m, 8, 5.4f, 1);
     add_part(md, mesh_done(m, 40), A_SPIN_ALL, vp_v3(0, 0, 0), VP3D_WIREFRAME);
     vp3d_mesh *c = mesh_new();
     add_octa(c, 0, 0, 0, 2.0f, 2.0f, 2.0f);
-    colored(add_part(md, mesh_done(c, 30), A_SPIN, vp_v3(0, 0, 0), VP3D_SOLID), mkrgb(255, 255, 120));
+    detail(colored(add_part(md, mesh_done(c, 30), A_SPIN, vp_v3(0, 0, 0), VP3D_SOLID), mkrgb(255, 255, 120)));
     md->height = 11;
     md->color = mkrgb(255, 80, 20);
 }
@@ -460,8 +461,8 @@ static void build_enforcer(model *md)
     add_frustum(m, 6, 0, 0, -1.2f, 2.0f, 0, 4.6f, PI / 6);     /* the underside */
     colored(add_part(md, mesh_done(m, 30), A_SPIN, vp_v3(0, 0, 0), VP3D_SOLID), mkrgb(70, 110, 255));
     vp3d_mesh *r = mesh_new();
-    add_frustum(r, 6, 0, 0, 0, 4.6f, 1.0f, 3.6f, PI / 6);      /* the red band */
-    colored(add_part(md, mesh_done(r, 30), A_SPIN, vp_v3(0, 0, 0), VP3D_SOLID), mkrgb(255, 40, 40));
+    add_frustum(r, 6, 0, 0, 0, 4.6f, 1.0f, 3.6f, PI / 6);      /* the red band, up close */
+    detail(colored(add_part(md, mesh_done(r, 30), A_SPIN, vp_v3(0, 0, 0), VP3D_SOLID), mkrgb(255, 40, 40)));
     vp3d_mesh *d = mesh_new();
     add_frustum(d, 6, 0, 0, 1.0f, 3.0f, 3.6f, 1.2f, 0);        /* the dome */
     add_part(md, mesh_done(d, 30), A_SPIN, vp_v3(0, 0, 0), VP3D_SOLID);
@@ -500,7 +501,7 @@ static void build_quark(model *md)
     add_line(x, -k, h, k, k, h, -k);
     add_line(x, -k, -h, -k, k, -h, k);
     add_line(x, -k, -h, k, k, -h, -k);
-    colored(add_part(md, mesh_done(x, 40), A_SPIN_ALL, vp_v3(0, 0, 0), VP3D_WIREFRAME), mkrgb(40, 255, 40));
+    detail(colored(add_part(md, mesh_done(x, 40), A_SPIN_ALL, vp_v3(0, 0, 0), VP3D_WIREFRAME), mkrgb(40, 255, 40)));
     md->height = 12;
     md->color = mkrgb(60, 80, 255);
 }
@@ -514,8 +515,10 @@ static void build_tank(model *md)
     colored(solid(md, tr), mkrgb(20, 150, 40));
     vp3d_mesh *h = mesh_new();
     add_box(h, 0, 6.2f, 0, 7.6f, 7.4f, 7.0f);                  /* the box */
-    add_box(h, 0, 10.4f, -0.5f, 2.4f, 1.0f, 2.4f);             /* its hatch */
     solid(md, h);
+    vp3d_mesh *hatch = mesh_new();
+    add_box(hatch, 0, 10.4f, -0.5f, 2.4f, 1.0f, 2.4f);         /* its hatch, up close */
+    detail(solid(md, hatch));
     vp3d_mesh *face = mesh_new();
     add_box(face, -1.6f, 7.6f, 3.6f, 1.6f, 1.6f, 0.4f);        /* the eyes */
     add_box(face, 1.6f, 7.6f, 3.6f, 1.6f, 1.6f, 0.4f);
@@ -563,138 +566,97 @@ static void build_skull(model *md)
     md->color = mkrgb(255, 255, 255);
 }
 
-/* A flat shape standing upright, `depth` thick: its outline in the xy plane
- * (star-shaped round its centroid), capped
- * front and back with triangles from the centroid so every face is convex. */
-static void add_slab(vp3d_mesh *m, const float (*pts)[2], int n, float depth)
-{
-    float cx = 0, cy = 0;
-    for (int i = 0; i < n; i++) { cx += pts[i][0]; cy += pts[i][1]; }
-    cx /= n;
-    cy /= n;
-    float z0 = -depth / 2, z1 = depth / 2;
-    int f = vp3d_mesh_vertex_count(m);
-    for (int i = 0; i < n; i++) vp3d_mesh_vertex(m, pts[i][0], pts[i][1], z0);
-    int bk = vp3d_mesh_vertex_count(m);
-    for (int i = 0; i < n; i++) vp3d_mesh_vertex(m, pts[i][0], pts[i][1], z1);
-    int fc = vp3d_mesh_vertex(m, cx, cy, z0);
-    int bc = vp3d_mesh_vertex(m, cx, cy, z1);
-    for (int i = 0; i < n; i++) {
-        int j = (i + 1) % n;
-        int t1[3] = { fc, f + j, f + i };
-        int t2[3] = { bc, bk + i, bk + j };
-        int q[4] = { f + i, f + j, bk + j, bk + i };
-        vp3d_mesh_face(m, t1, 3);
-        vp3d_mesh_face(m, t2, 3);
-        vp3d_mesh_face(m, q, 4);
-    }
-}
-
 /* The digits of "2084" as segments on a 2 x 2 cell (as font3d). */
-static void add_digit(vp3d_mesh *m, char c, float x0, float y0, float w, float h, float z, int mirror)
+static void add_digit(vp3d_mesh *m, char c, float x0, float y0, float w, float h)
 {
     static const float PX[9] = { 0, 0.5f, 1, 0, 0.5f, 1, 0, 0.5f, 1 };
     static const float PY[9] = { 1, 1, 1, 0.5f, 0.5f, 0.5f, 0, 0, 0 };
     const char *g = c == '2' ? "0225533668" : c == '0' ? "02288660" : c == '8' ? "0228866035" : "033528";
     for (int k = 0; g[k] && g[k + 1]; k += 2) {
         int a = g[k] - '0', b = g[k + 1] - '0';
-        float xa = x0 + PX[a] * w, xb = x0 + PX[b] * w;
-        if (mirror) { xa = -xa; xb = -xb; }
-        add_line(m, xa, y0 + PY[a] * h, z, xb, y0 + PY[b] * h, z);
+        add_line(m, x0 + PX[a] * w, y0 + PY[a] * h, 0, x0 + PX[b] * w, y0 + PY[b] * h, 0);
     }
+}
+
+/* A rectangle standing upright in the xy plane, centered on (0, cy). */
+static void add_rect(vp3d_mesh *m, float cy, float w, float h)
+{
+    const float pts[4][3] = { {-w / 2, cy - h / 2, 0}, {w / 2, cy - h / 2, 0}, {w / 2, cy + h / 2, 0}, {-w / 2, cy + h / 2, 0} };
+    add_poly(m, pts, 4, 1);
 }
 
 /* Electrodes: the original's nine shapes, one per wave in turn (GTWCOL,
  * RRP8.ASM:294-384): star, snowflake, square, triangle, vertical bar,
- * diamond, spike, spiral, "2084". Flat like the sprites, standing up; the
- * game turns them to face the camera. */
+ * diamond, spike, spiral, "2084". Flat outlines standing up, like the
+ * sprites; the game turns them to face the camera. (They were slabs with a
+ * thickness: twice the lines, for 25 of them a wave.) */
 static void build_electrode(model *md, int shape)
 {
     vp3d_mesh *m = mesh_new();
-    vp3d_mesh *lines = NULL;
-    const float D = 1.6f, cy = 4.8f;
-    float pts[20][2];
+    const float cy = 4.8f;
+    float pts[20][3];
     int n = 0;
     switch (shape) {
     case 0:                                                    /* a sun: a 6-pointed star */
         for (int i = 0; i < 12; i++) {
             float a = i * PI / 6, r = (i & 1) ? 2.4f : 4.8f;
-            pts[n][0] = r * cosf(a); pts[n][1] = cy + r * sinf(a); n++;
+            pts[n][0] = r * cosf(a); pts[n][1] = cy + r * sinf(a); pts[n][2] = 0; n++;
         }
-        add_slab(m, (const float (*)[2])pts, n, D);
+        add_poly(m, (const float (*)[3])pts, n, 1);
         break;
     case 1:                                                    /* snowflake: a checkered diamond */
         pts[0][0] = 0; pts[0][1] = cy - 4.6f; pts[1][0] = 4.6f; pts[1][1] = cy;
         pts[2][0] = 0; pts[2][1] = cy + 4.6f; pts[3][0] = -4.6f; pts[3][1] = cy;
-        add_slab(m, (const float (*)[2])pts, 4, D);
-        lines = mesh_new();
+        for (int i = 0; i < 4; i++) pts[i][2] = 0;
+        add_poly(m, (const float (*)[3])pts, 4, 1);
         for (int k = -1; k <= 1; k++) {
-            for (int sd = -1; sd <= 1; sd += 2) {
-                float o = k * 1.6f, z = sd * (D / 2 + 0.05f);
-                add_line(lines, -2.3f + o, cy - 2.3f - o, z, 2.3f + o, cy + 2.3f - o, z);
-                add_line(lines, -2.3f + o, cy + 2.3f + o, z, 2.3f + o, cy - 2.3f + o, z);
-            }
+            float o = k * 1.6f;
+            add_line(m, -2.3f + o, cy - 2.3f - o, 0, 2.3f + o, cy + 2.3f - o, 0);
+            add_line(m, -2.3f + o, cy + 2.3f + o, 0, 2.3f + o, cy - 2.3f + o, 0);
         }
         break;
-    case 2: add_box(m, 0, cy, 0, 7.6f, 7.6f, D); break;                       /* square */
+    case 2: add_rect(m, cy, 7.6f, 7.6f); break;                              /* square */
     case 3:                                                                    /* triangle */
         pts[0][0] = -4.0f; pts[0][1] = 0.6f; pts[1][0] = 4.0f; pts[1][1] = 0.6f;
         pts[2][0] = 4.0f; pts[2][1] = 8.6f;
-        add_slab(m, (const float (*)[2])pts, 3, D);
+        for (int i = 0; i < 3; i++) pts[i][2] = 0;
+        add_poly(m, (const float (*)[3])pts, 3, 1);
         break;
-    case 4: add_box(m, 0, cy, 0, 2.6f, 9.4f, D); break;                       /* vertical bar */
+    case 4: add_rect(m, cy, 2.6f, 9.4f); break;                              /* vertical bar */
     case 5:                                                                    /* diamond */
         pts[0][0] = 0; pts[0][1] = cy - 4.6f; pts[1][0] = 4.0f; pts[1][1] = cy;
         pts[2][0] = 0; pts[2][1] = cy + 4.6f; pts[3][0] = -4.0f; pts[3][1] = cy;
-        add_slab(m, (const float (*)[2])pts, 4, D);
+        for (int i = 0; i < 4; i++) pts[i][2] = 0;
+        add_poly(m, (const float (*)[3])pts, 4, 1);
         break;
     case 6:                                                                    /* spike: a comb */
-        add_box(m, 0, 3.6f, 0, 10.0f, 2.8f, D);
-        lines = mesh_new();
+        add_rect(m, 3.6f, 10.0f, 2.8f);
         for (int k = 0; k < 5; k++) {
             float x = -4.0f + k * 2.0f;
-            add_line(lines, x, 5.0f, 0, x, 8.2f, 0);
+            add_line(m, x, 5.0f, 0, x, 8.2f, 0);
         }
         break;
     case 7: {                                                                  /* a square spiral */
         float x = -4.2f, y = cy - 4.2f, len = 8.4f;
-        float pp[16][3];
-        int k = 0, dir = 0;
-        pp[k][0] = x; pp[k][1] = y; pp[k][2] = 0; k++;
-        while (k < 14 && len > 0.8f) {
+        int dir = 0;
+        pts[n][0] = x; pts[n][1] = y; pts[n][2] = 0; n++;
+        while (n < 14 && len > 0.8f) {
             static const float DX[4] = { 1, 0, -1, 0 }, DY[4] = { 0, 1, 0, -1 };
             x += DX[dir] * len;
             y += DY[dir] * len;
-            pp[k][0] = x; pp[k][1] = y; pp[k][2] = 0; k++;
+            pts[n][0] = x; pts[n][1] = y; pts[n][2] = 0; n++;
             if (dir & 1) len -= 1.8f;
             dir = (dir + 1) & 3;
         }
-        float front[16][3], back[16][3];
-        for (int i = 0; i < k; i++) {
-            front[i][0] = back[i][0] = pp[i][0];
-            front[i][1] = back[i][1] = pp[i][1];
-            front[i][2] = -0.6f;
-            back[i][2] = 0.6f;
-        }
-        add_poly(m, (const float (*)[3])front, k, 0);
-        add_poly(m, (const float (*)[3])back, k, 0);
-        add_part(md, mesh_done(m, 30), A_NONE, vp_v3(0, 0, 0), VP3D_WIREFRAME);
-        md->height = 10;
-        md->color = mkrgb(40, 255, 40);
-        return;
-    }
-    default:                                                                   /* "2084" */
-        add_box(m, 0, 3.4f, 0, 11.0f, 5.0f, D);
-        lines = mesh_new();
-        for (int sd = -1; sd <= 1; sd += 2) {
-            float z = sd * (D / 2 + 0.05f);
-            /* the back reads right from behind too */
-            for (int k = 0; k < 4; k++) add_digit(lines, "2084"[k], -4.8f + k * 2.5f, 1.6f, 1.6f, 3.6f, z, sd > 0);
-        }
+        add_poly(m, (const float (*)[3])pts, n, 0);
         break;
     }
-    add_part(md, mesh_done(m, 30), A_NONE, vp_v3(0, 0, 0), VP3D_SOLID);
-    if (lines) add_part(md, mesh_done(lines, 40), A_NONE, vp_v3(0, 0, 0), VP3D_WIREFRAME);
+    default:                                                                   /* "2084" */
+        add_rect(m, 3.4f, 11.0f, 5.0f);
+        for (int k = 0; k < 4; k++) add_digit(m, "2084"[k], -4.8f + k * 2.5f, 1.6f, 1.6f, 3.6f);
+        break;
+    }
+    add_part(md, mesh_done(m, 40), A_NONE, vp_v3(0, 0, 0), VP3D_WIREFRAME);
     md->height = 10;
     md->color = mkrgb(40, 255, 40);
 }

@@ -55,7 +55,7 @@ static const int EXTRA[] = { 0, 10000, 15000, 20000, 25000, 30000, 40000, 50000 
 #define EXTRA_N 8
 
 enum { GM_FREE, GM_LIVES, GM_EXTRA, GM_DIFF, GM_TWO, GM_DEMO, GM_BACK, GM_N };
-enum { DP_SX, DP_SY, DP_PX, DP_PY, DP_CAMERA, DP_FLOOR, DP_EFFECTS, DP_REFRESH, DP_RESET, DP_BACK, DP_N };
+enum { DP_SX, DP_SY, DP_PX, DP_PY, DP_CAMERA, DP_EFFECTS, DP_RESET, DP_BACK, DP_N };
 enum { SD_VOLUME, SD_TEST, SD_BACK, SD_N };
 #define CT_N (ACT_COUNT + 2)       /* the actions, RESET ALL, BACK */
 
@@ -100,9 +100,7 @@ static void change_display(int item, int d)
     case DP_PX:      SET.pos_x = clampi(SET.pos_x + d * 10, -600, 600); break;
     case DP_PY:      SET.pos_y = clampi(SET.pos_y + d * 10, -600, 600); break;
     case DP_CAMERA:  SET.camera = (SET.camera + d + 3) % 3; break;
-    case DP_FLOOR:   SET.floor = (SET.floor + 1 + d + 4) % 4 - 1; break;
     case DP_EFFECTS: SET.effects = clampi(SET.effects + d, 0, 2); break;
-    case DP_REFRESH: SET.refresh = clampi(SET.refresh + d * 10, 30, 60); note("TAKES EFFECT AT THE NEXT START"); return;
     default: return;
     }
     game_apply_settings();
@@ -159,7 +157,7 @@ int service_update(vp_game *g)
                 if (S.confirm == 6) {
                     settings s0 = { .free_play = 0, .lives = 3, .extra_man = 25000, .difficulty = 5,
                                     .two_players = 1, .attract_sound = 1, .size_x = 100, .size_y = 100,
-                                    .camera = 0, .floor = -1, .effects = 2, .refresh = 40, .volume = 8 };
+                                    .camera = 0, .effects = 2, .volume = 8 };
                     SET = s0;
                     bind_clear_all();
                     game_apply_settings();
@@ -286,7 +284,6 @@ void service_draw(vp_dvg *d, double t)
         test_pattern(d);
         text(d, mkrgb(255, 60, 60), "DISPLAY", W / 2.0f, 3750, 160, VP_TEXT_CENTER);
         static const char *const CAM[3] = { "ROBOTRON X", "ARENA", "CLASSIC" };
-        static const char *const FLOOR[4] = { "AUTO", "TILES", "GRID", "NONE" };
         static const char *const FX[3] = { "OFF", "LIGHT", "FULL" };
         snprintf(v, sizeof v, "%d %%", SET.size_x);
         line_item(d, DP_SX, sel, "PICTURE WIDTH", v, y, h); y -= step;
@@ -297,10 +294,7 @@ void service_draw(vp_dvg *d, double t)
         snprintf(v, sizeof v, "%+d", SET.pos_y);
         line_item(d, DP_PY, sel, "PICTURE DOWN - UP", v, y, h); y -= step;
         line_item(d, DP_CAMERA, sel, "CAMERA", CAM[SET.camera], y, h); y -= step;
-        line_item(d, DP_FLOOR, sel, "FLOOR", FLOOR[SET.floor + 1], y, h); y -= step;
         line_item(d, DP_EFFECTS, sel, "EFFECTS", FX[SET.effects], y, h); y -= step;
-        snprintf(v, sizeof v, "%d HZ", SET.refresh);
-        line_item(d, DP_REFRESH, sel, "REFRESH ON THE BOARD", v, y, h); y -= step;
         line_item(d, DP_RESET, sel, "RESET PICTURE", NULL, y, h); y -= step;
         line_item(d, DP_BACK, sel, "BACK", NULL, y, h);
         break;
