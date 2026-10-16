@@ -440,10 +440,10 @@ static rgb kill_color(int type)
     case T_GRUNT:     return mkrgb(255, 40, 40);
     case T_BRAIN:     return mkrgb(200, 60, 255);
     case T_PROG:      return mkrgb(255, 80, 255);
-    case T_SPHEROID:  return mkrgb(255, 120, 40);
-    case T_ENFORCER:  return mkrgb(40, 255, 120);
-    case T_QUARK:     return mkrgb(120, 200, 255);
-    case T_TANK:      return mkrgb(255, 160, 40);
+    case T_SPHEROID:  return mkrgb(255, 40, 30);
+    case T_ENFORCER:  return mkrgb(225, 225, 235);
+    case T_QUARK:     return mkrgb(60, 80, 255);
+    case T_TANK:      return mkrgb(40, 255, 40);
     case T_ELECTRODE: return mkrgb(255, 200, 80);
     default:          return mkrgb(255, 255, 255);
     }
@@ -485,10 +485,21 @@ static void destroy(world *w, int i, float dx, float dz)
     case T_SPARK:     snd_play(SND_SMALL_DIE); pieces = 4; size = 4; break;
     case T_SHELL:     snd_play(SND_SMALL_DIE); pieces = 4; size = 4; break;
     case T_SPHEROID:  snd_play(SND_SPHEROID_DIE); pieces = 22; fx_popup(x, z, 1000); break;
-    case T_QUARK:     snd_play(SND_QUARK_DIE); pieces = 22; fx_popup(x, z, 1000); break;
+    case T_QUARK:
+        /* the original's square bursts into its corners */
+        snd_play(SND_QUARK_DIE);
+        pieces = 22;
+        fx_popup(x, z, 1000);
+        fx_sparks(x, 8, z, mkrgb(60, 80, 255), 24, 2.6f);
+        fx_sparks(x, 8, z, mkrgb(40, 255, 40), 16, 2.0f);
+        break;
     case T_ENFORCER:  snd_play(SND_ENFORCER_DIE); break;
     case T_TANK:      snd_play(SND_TANK_DIE); pieces = 20; break;
-    case T_ELECTRODE: snd_play(SND_ELECTRODE_DIE); pieces = 8; size = 8; break;
+    case T_ELECTRODE:
+        snd_play(SND_ELECTRODE_DIE);
+        fx_electrode_shrink(x, z, wave_electrode_shape(w->wave), render_electrode_color(w->wave));
+        pieces = 6; size = 8;
+        break;
     default: break;
     }
     fx_explode(x, 0, z, kill_color(type), dx, dz, pieces, size);
@@ -843,7 +854,7 @@ static void spawn_enforcer(world *w, ent *s)
     e->timer2 = 0;
     e->timer3 = rmax(w, w->p[P_ENSTIM]);
     e->age = 0;
-    fx_sparks(e->x, 8, e->z, mkrgb(40, 255, 120), 10, 1.4f);
+    fx_sparks(e->x, 8, e->z, mkrgb(255, 60, 60), 10, 1.4f);
     snd_play(SND_ENFORCER_BIRTH);
 }
 

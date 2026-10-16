@@ -79,6 +79,12 @@ typedef struct {
 typedef struct { float x, y, z, r, vr, life, max; rgb c; } ring;
 
 typedef struct { float x, z, life; int value; } popup;
+
+/* an electrode being destroyed: the original's three shrinking images
+ * (6, 3 and 2 frames) */
+typedef struct { float x, z, life; int shape; rgb c; } shrink;
+#define MAX_SHRINKS 16
+static shrink SH[MAX_SHRINKS];
 typedef struct { float x, z, life; } skull;
 
 static frag   F[MAX_FRAGS];
@@ -114,6 +120,7 @@ void fx_clear(void)
 {
     nF = 0;
     memset(R, 0, sizeof R);
+    memset(SH, 0, sizeof SH);
     memset(P, 0, sizeof P);
     memset(K, 0, sizeof K);
     flash_time = 0;
@@ -284,6 +291,19 @@ void fx_fireworks(void)
     }
 }
 
+void fx_electrode_shrink(float x, float z, int shape, rgb c)
+{
+    for (int i = 0; i < MAX_SHRINKS; i++) {
+        if (SH[i].life > 0) continue;
+        SH[i].x = x;
+        SH[i].z = z;
+        SH[i].shape = shape;
+        SH[i].c = c;
+        SH[i].life = 11;
+        break;
+    }
+}
+
 void fx_popup(float x, float z, int value)
 {
     int best = 0;
@@ -361,6 +381,7 @@ void fx_step(void)
     }
     for (int i = 0; i < MAX_POPUPS; i++) if (P[i].life > 0) P[i].life--;
     for (int i = 0; i < MAX_SKULLS; i++) if (K[i].life > 0) K[i].life--;
+    for (int i = 0; i < MAX_SHRINKS; i++) if (SH[i].life > 0) SH[i].life--;
     if (flash_time > 0) flash_time--;
     if (banner_time > 0) banner_time--;
     shake *= 0.88f;
@@ -647,19 +668,23 @@ static float hover_of(int type)
     }
 }
 
+static rgb electrode_color(int wave)
+{
+    /* a color of its own every wave, as the original's post colors */
+    static const rgb ec[10] = { {255,140,0}, {0,200,255}, {255,60,255}, {255,255,40}, {60,255,60},
+                                {255,60,60}, {120,120,255}, {255,255,255}, {0,255,200}, {255,160,200} };
+    return ec[((wave > 0 ? wave : 1) - 1) % 10];
+}
+
+rgb render_electrode_color(int wave) { return electrode_color(wave); }
+
 static rgb color_of(const ent *e, int wave, double t)
 {
     switch (e->type) {
-    case T_SPHEROID: return hsv((float)t * 0.8f, 0.8f, 1);
-    case T_QUARK:    return hsv((float)t * 1.3f + e->x * 0.01f, 0.7f, 1);
-    case T_SPARK:    return ((int)(t * 20) & 1) ? mkrgb(255, 255, 255) : mkrgb(255, 80, 255);
+    case T_SPHEROID: return ((int)(t * 12 + e->x) & 1) ? mkrgb(255, 30, 20) : mkrgb(255, 110, 40);
+    case T_SPARK:    return ((int)(t * 20) & 1) ? mkrgb(255, 40, 40) : mkrgb(255, 200, 80);
     case T_CRUISE:   return hsv((float)t * 2, 0.6f, 1);
-    case T_ELECTRODE: {
-        /* a color of its own every wave, as the original's post colors */
-        static const rgb ec[10] = { {255,140,0}, {0,200,255}, {255,60,255}, {255,255,40}, {60,255,60},
-                                    {255,60,60}, {120,120,255}, {255,255,255}, {0,255,200}, {255,160,200} };
-        return ec[((wave > 0 ? wave : 1) - 1) % 10];
-    }
+    case T_ELECTRODE: return electrode_color(wave);
     default:         return model_color(model_of(e, wave));
     }
 }
@@ -723,6 +748,12 @@ void render_world(vp_dvg *d, const world *w, double t)
             pose.dim = 0.4f + 0.6f * k;
         } else {
             pose.sxz = pose.sy = 1;
+        }
+        if (e->type == T_ELECTRODE) pose.heading = CAM.yaw;      /* flat, like the sprites */
+        if (e->type == T_QUARK) {           /* the original's square grows and shrinks */
+            float pulse = 0.65f + 0.35f * fabsf(sinf((float)t * 4 + e->z));
+            pose.sxz *= pulse;
+            pose.sy *= pulse;
         }
         if (e->type == T_SPHEROID) {
             float pulse = 0.75f + 0.3f * sinf((float)t * 9 + e->x);
@@ -846,6 +877,21 @@ void render_world(vp_dvg *d, const world *w, double t)
             vp3d_scene_line(SCENE, prev, p);
             prev = p;
         }
+    }
+
+    /* electrodes shrinking away */
+    for (int i = 0; i < MAX_SHRINKS; i++) {
+        if (SH[i].life <= 0) continue;
+        float k = SH[i].life > 5 ? 0.75f : SH[i].life > 2 ? 0.45f : 0.2f;
+        memset(&pose, 0, sizeof pose);
+        pose.x = SH[i].x;
+        pose.z = SH[i].z;
+        pose.heading = CAM.yaw;
+        pose.sxz = pose.sy = k;
+        pose.flat_color = 1;
+        pose.dim = 1;
+        pose.color = SH[i].c;
+        model_draw(d, &VIEW, SCENE, (model_id)(MDL_ELECTRODE0 + SH[i].shape), &pose);
     }
 
     /* skulls where humans died */

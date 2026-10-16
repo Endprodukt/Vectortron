@@ -30,6 +30,8 @@ void fx_rescue(float x, float z);
 void fx_player_dies(float x, float z);
 void fx_wave_start(float x, float z);
 void fx_fireworks(void);
+void fx_electrode_shrink(float x, float z, int shape, rgb c);
+rgb  render_electrode_color(int wave);
 
 /* The stage's colors follow the wave (the original's ten wall colors). */
 void render_set_wave(int wave);
