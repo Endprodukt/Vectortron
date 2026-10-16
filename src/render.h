@@ -36,6 +36,8 @@ rgb  render_electrode_color(int wave);
 /* The stage's colors follow the wave (the original's ten wall colors). */
 void render_set_wave(int wave);
 rgb  render_laser_color(void);
+/* 0 off (the original's debris only), 1 light, 2 full */
+void fx_set_level(int level);
 void fx_clear(void);
 void fx_step(void);                       /* one 60 Hz step */
 
@@ -49,7 +51,7 @@ vp3d_scene *render_scene(void);
 void render_world(vp_dvg *d, const world *w, double t);
 
 /* The Robotron X score: the score, the men and the wave on the far wall. */
-void render_wall_hud(vp_dvg *d, const world *w, int player, int players, double t);
+void render_wall_hud(vp_dvg *d, const world *w1, const world *w2, int players, int current, double t);
 
 /* The flat score line (the classic overhead camera): both players' scores and men, the wave. */
 void render_hud(vp_dvg *d, const world *w1, const world *w2, int players, int current, int hiscore,

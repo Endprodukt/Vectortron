@@ -510,13 +510,13 @@ static void destroy(world *w, int i, float dx, float dz)
 
 static void player_move(world *w, const controls *c)
 {
+    /* 8 ways only (the demo player's wishes are snapped too): the original
+     * moves 1 pixel and 1 line a frame, diagonals not shortened */
     float mx = c->mx, mz = c->mz;
-    float m = fmaxf(fabsf(mx), fabsf(mz));
     float len = sqrtf(mx * mx + mz * mz);
-    if (len > 1) len = 1;
-    if (m > 0.05f) {
-        /* the original: 1 pixel and 1 line a frame, diagonals not shortened */
-        float vx = mx / m * len, vz = mz / m * len;
+    if (len > 0.3f) {
+        float vx = fabsf(mx) > 0.38f * len ? sgn(mx) : 0;
+        float vz = fabsf(mz) > 0.38f * len ? sgn(mz) : 0;
         w->px += vx;
         w->pz += vz;
         if (w->px < ARENA_X0 + PLAYER_W / 2) w->px = ARENA_X0 + PLAYER_W / 2;

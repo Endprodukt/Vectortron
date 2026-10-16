@@ -45,18 +45,23 @@ see [docs/robotron-rules.md](docs/robotron-rules.md).
 
 | | |
 |---|---|
-| Move | P1 stick (arrow keys) |
-| Fire, twin stick | a second stick: `p1_doubleright_*` from advmame.rc, or the P2 stick (keys R/F/D/G, joystick 2, analog too) |
+| Move | P1 stick (arrow keys), 8 ways |
+| Fire, twin stick | a second stick: `p1_doubleright_*` from advmame.rc, or the P2 stick (keys R/F/D/G, joystick 2) |
 | Fire, single stick | button 1 (left Ctrl): fires the way you face |
 | Strafe (single stick) | hold button 2 (left Alt): keeps the facing |
 | Camera | button 3 (Space): Robotron X / arena / classic overhead |
 | Start | 1 / 2, coins 5 / 6, back to the menu: Esc |
+| Service menu | F2 (or SERVICE as bound), or hold buttons 2 + 3 for two seconds in the attract mode |
 
-Twin stick and single stick both work at all times; there is nothing to
-switch. As in the original, shots go 8 ways, at most 4 at a time.
+As on the original's two 8-way joysticks, moving and firing go 8 ways only
+(an analog stick counts past half travel), at most 4 shots at a time. Twin
+stick and single stick both work at all times; there is nothing to switch.
 
-A gamepad with two sticks or a Robotron panel is bound in the cabinet's
-`advmame.rc`, for example a pad's right stick as the fire stick:
+Out of the box every action follows the cabinet's `advmame.rc`. Any action
+can be bound otherwise in the service menu (CONTROLS): two inputs each, any
+key, joystick button, joystick axis direction or hat direction. For a pad's
+right stick as the fire stick, either bind FIRE UP/DOWN/LEFT/RIGHT there or
+add to `advmame.rc`:
 
 ```
 input_map[p1_doubleright_up]    joystick_digital[0,1,1,up]
@@ -65,24 +70,41 @@ input_map[p1_doubleright_left]  joystick_digital[0,1,0,left]
 input_map[p1_doubleright_right] joystick_digital[0,1,0,right]
 ```
 
-## Settings
+## Two players
 
-`save/settings.txt` next to the executable (written the first time the
-camera is changed):
+START 2 starts a game for two (when 2 PLAYER GAMES is on), taking turns on
+the same controls as on the original cabinet: each player has their own
+wave, men and score. Both scores stand on the far wall, 1UP and 2UP, the one
+playing blinking; each turn opens with PLAYER 1 / PLAYER 2 and GET READY.
 
-```
-free_play  = 0     ; 1: START needs no coin
-lives      = 3     ; men at the start of a game
-extra_man  = 25000 ; an extra man every this many points (0: none)
-camera     = 0     ; 0 Robotron X, 1 arena, 2 classic overhead
-floor      = -1    ; -1 automatic, 0 tiles, 1 grid, 2 none
-difficulty = 5     ; the original's MASTER DIFFICULTY, 0..10 (5: as the wave table)
-```
+## Service menu
 
-The tiled floor costs the beam a lot; `floor = -1` picks the grid on a
-USB-DVG and the tiles on a BeamForge and in a window. On the board the
-picture runs at 30 Hz (`frame_hz_board`); the game logic always runs at
-60 Hz, as the original. `VP_STATS=1` prints what a frame costs.
+F2, or holding buttons 2 + 3 for two seconds in the attract mode, opens it.
+Up / down choose, left / right change, button 1 (or Return) selects, button 2
+(or Backspace) goes back. The arrow keys, Return, Backspace and the first
+joystick always work in it, whatever the bindings.
+
+* **GAME SETTINGS** – free play, men per game, extra man every (none,
+  10,000 … 50,000), difficulty 0–10 (the original's master difficulty, 5
+  recommended), 2 player games on/off, attract mode sounds on/off.
+* **DISPLAY** – picture width and height (50–120 %), position left/right
+  and down/up, over a test pattern (the board's edge, a grid, a circle that
+  is round when the picture is right); camera, floor, effects (off, light,
+  full).
+* **CONTROLS** – every action, its two inputs, CLEAR (back to the
+  cabinet's), RESET ALL TO THE CABINET.
+* **INPUT TEST** – every action lights up while held.
+* **SOUND** – volume, a sound test, and whether the original ROM was found.
+* **RESET HIGH SCORES**, **RESET ALL SETTINGS** (each asks for a second press).
+
+Everything takes effect at once and is kept in `save/settings.txt` next to
+the executable (it can be edited by hand too). The picture size and
+position apply to everything drawn, the game's lines and the SDK's.
+
+The tiled floor costs the beam a lot: FLOOR AUTO picks the grid on a USB-DVG
+and the tiles on a BeamForge and in a window. On the board the picture runs
+at 30 Hz (`frame_hz_board`); the game logic always runs at 60 Hz, as the
+original. `VP_STATS=1` prints what a frame costs.
 
 ## Sounds
 

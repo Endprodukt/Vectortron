@@ -57,8 +57,14 @@ add_executable(vectortron
     src/demo.c
     src/williams.c
     src/romzip.c
+    src/bind.c
+    src/service.c
+    src/screen.c
 )
 vp_program(vectortron)
+# the picture's size and position (screen.c): every point the game and the
+# SDK draw goes through the wrappers
+target_link_options(vectortron PRIVATE -Wl,--wrap=vp_moveto -Wl,--wrap=vp_lineto)
 if(UNIX)
     target_link_libraries(vectortron PRIVATE m)
 endif()
@@ -97,7 +103,7 @@ endif()
 
 # vt-sim: the rules without a screen, played by the demo player (a test).
 add_executable(vt-sim tests/sim.c src/game.c src/waves.c src/demo.c src/render.c src/models.c
-               src/font3d.c src/sound.c src/williams.c src/romzip.c)
+               src/font3d.c src/sound.c src/williams.c src/romzip.c src/controls.c src/bind.c)
 vp_program(vt-sim)
 if(UNIX)
     target_link_libraries(vt-sim PRIVATE m)

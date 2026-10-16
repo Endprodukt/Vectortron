@@ -11,16 +11,19 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "bind.h"
 #include "controls.h"
 #include "game.h"
 #include "models.h"
 #include "render.h"
+#include "screen.h"
+#include "service.h"
 #include "settings.h"
 #include "sound.h"
 
 #define W VP_DVG_COORD_MAX
 
-enum { S_ATTRACT, S_PLAY, S_INITIALS };
+enum { S_ATTRACT, S_PLAY, S_INITIALS, S_SERVICE };
 enum { A_TITLE, A_ROSTER, A_SCORES, A_DEMO, A_PAGES };
 
 static struct {
@@ -42,6 +45,8 @@ static struct {
     world      demo;
     unsigned   seed;
     int        autoplay;
+    int        service_hold;    /* frames buttons 2 + 3 have been held together */
+    vp_game   *game;
 } G;
 
 static int hiscore(void) { return G.table_n > 0 ? G.table[0].score : 0; }
@@ -110,19 +115,35 @@ static void begin_initials_or_attract(void)
 
 /* ---- the loop ------------------------------------------------------------ */
 
+/* The settings in force: called at start and by the service menu. */
+void game_apply_settings(void)
+{
+    G.credits.free_play = SET.free_play;
+    screen_set(SET.size_x, SET.size_y, SET.pos_x, SET.pos_y);
+    fx_set_level(SET.effects);
+    /* the tiled floor costs the beam a lot: a USB-DVG gets the grid */
+    int floor = SET.floor;
+    if (floor < 0) floor = vp_dvg_hardware(vp_game_output(G.game)) == VP_HW_USB_DVG ? 1 : 0;
+    render_set_floor(floor);
+    vp_audio_set_master(vp_game_audio(G.game), SET.volume / 10.0f);
+}
+
+void game_scores_reset(void)
+{
+    reload_table();
+    G.last_rank = -1;
+}
+
 static int init(vp_game *g)
 {
+    G.game = g;
+    bind_init();
     settings_load();
-    G.credits.free_play = SET.free_play;
     vp_credits_init(&G.credits);
-    G.credits.free_play = SET.free_play;
     snd_init(vp_game_audio(g));
     models_init();
     render_init();
-    /* the tiled floor costs the beam a lot: a USB-DVG gets the grid */
-    int floor = SET.floor;
-    if (floor < 0) floor = vp_dvg_hardware(vp_game_output(g)) == VP_HW_USB_DVG ? 1 : 0;
-    render_set_floor(floor);
+    game_apply_settings();
     reload_table();
     G.seed = 2084;
     G.last_rank = -1;
@@ -211,18 +232,42 @@ static void step_play(vp_input *in)
 static void update(vp_game *g, float dt)
 {
     vp_input *in = vp_game_input(g);
+    bind_update(in);
     snd_tick();
-    if (vp_credits_update(&G.credits, in)) snd_play(SND_COIN);
+    if (G.state != S_SERVICE) {
+        int coins = act_pressed(ACT_COIN1) + act_pressed(ACT_COIN2);
+        if (coins) {
+            G.credits.credits += coins;
+            if (G.credits.credits > G.credits.max) G.credits.credits = G.credits.max;
+            snd_play(SND_COIN);
+        }
+    }
     G.time += dt;
+    /* the attract mode's demo is silent when the owner says so */
+    int quiet = G.state == S_ATTRACT && G.page == A_DEMO && !SET.attract_sound;
+    vp_audio_set_master(vp_game_audio(g), quiet ? 0.0f : SET.volume / 10.0f);
 
     switch (G.state) {
+    case S_SERVICE:
+        if (service_update(g)) {
+            fx_clear();
+            goto_attract(A_TITLE);
+        }
+        break;
     case S_ATTRACT: {
         vp_credits_blink(&G.credits, vp_game_time(g));
-        if (vp_input_pressed(in, "start1") && vp_credits_take(&G.credits, 1)) { start_game(1); return; }
-        if (vp_input_pressed(in, "start2") && vp_credits_take(&G.credits, 2)) { start_game(2); return; }
-        if (vp_input_pressed(in, "p1_button3")) {
-            SET.camera = (SET.camera + 1) % CAMERA_MODES;
-            settings_save();
+        if (act_pressed(ACT_START1) && vp_credits_take(&G.credits, 1)) { start_game(1); return; }
+        if (SET.two_players && act_pressed(ACT_START2) && vp_credits_take(&G.credits, 2)) { start_game(2); return; }
+        /* the service menu: the service button, or buttons 2 + 3 held */
+        menu_keys mk;
+        bind_menu(&mk);
+        if (act_held(ACT_STRAFE) && act_held(ACT_CAMERA)) G.service_hold++; else G.service_hold = 0;
+        if (mk.service || G.service_hold > 120) {
+            G.service_hold = 0;
+            G.state = S_SERVICE;
+            vp_lamps_set(0);
+            service_open();
+            return;
         }
         static const float LEN[A_PAGES] = { 9, 14, 8, 40 };
         if (G.page == A_DEMO) {
@@ -265,7 +310,7 @@ static void draw_credits_line(vp_dvg *d, double t)
     else snprintf(buf, sizeof buf, "CREDITS %d", G.credits.credits);
     text(d, mkrgb(160, 160, 160), buf, W / 2.0f, 120, 80, VP_TEXT_CENTER);
     if ((int)(t * 2) & 1) {
-        const char *msg = vp_credits_enough(&G.credits, 2) ? "PRESS 1 OR 2 PLAYER START"
+        const char *msg = SET.two_players && vp_credits_enough(&G.credits, 2) ? "PRESS 1 OR 2 PLAYER START"
                         : vp_credits_enough(&G.credits, 1) ? "PRESS 1 PLAYER START" : "INSERT COIN";
         text(d, mkrgb(255, 255, 0), msg, W / 2.0f, 330, 110, VP_TEXT_CENTER);
     }
@@ -401,12 +446,18 @@ static void draw_play(vp_dvg *d, double t)
     }
     render_world(d, w, t);
     if (SET.camera == 2) render_hud(d, &G.pw[0], &G.pw[1], G.players, G.cur, hiscore(), t);
-    else render_wall_hud(d, w, G.cur, G.players, t);
+    else render_wall_hud(d, &G.pw[0], &G.pw[1], G.players, G.cur, t);
     vp_text_font(VP_FONT_ASTEROIDS);
-    if (G.banner > 0 && ((int)G.banner / 8) % 2 == 0) {
+    if (G.banner > 0) {
+        /* whose turn it is: big, blinking, with that player's score */
         char buf[24];
-        snprintf(buf, sizeof buf, "PLAYER %d", G.cur + 1);
-        text(d, mkrgb(255, 255, 0), buf, W / 2.0f, 2100, 220, VP_TEXT_CENTER);
+        if (((int)G.banner / 8) % 2 == 0) {
+            snprintf(buf, sizeof buf, "PLAYER %d", G.cur + 1);
+            text(d, G.cur ? mkrgb(80, 160, 255) : mkrgb(255, 60, 60), buf, W / 2.0f, 2250, 280, VP_TEXT_CENTER);
+        }
+        text(d, mkrgb(255, 255, 0), "GET READY", W / 2.0f, 1850, 140, VP_TEXT_CENTER);
+        snprintf(buf, sizeof buf, "%d", G.pw[G.cur].score);
+        text(d, mkrgb(255, 255, 255), buf, W / 2.0f, 1550, 110, VP_TEXT_CENTER);
     }
     if (w->ph == PH_OVER) {
         text(d, mkrgb(255, 60, 60), "GAME OVER", W / 2.0f, 2150, 280, VP_TEXT_CENTER);
@@ -422,6 +473,9 @@ static void draw(vp_game *g, vp_dvg *d)
 {
     double t = vp_game_time(g);
     switch (G.state) {
+    case S_SERVICE:
+        service_draw(d, t);
+        break;
     case S_ATTRACT:
         switch (G.page) {
         case A_TITLE:  draw_title(d, t); break;

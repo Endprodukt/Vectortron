@@ -100,6 +100,13 @@ static rgb    banner_color;
 static float  banner_time, banner_max;
 static unsigned fx_rng = 777;
 
+static int fx_level = 2;            /* 0 off, 1 light, 2 full */
+
+void fx_set_level(int level) { fx_level = level; }
+
+/* fewer particles at a lighter setting */
+static int lvl(int n) { return fx_level >= 2 ? n : fx_level == 1 ? (n + 1) / 2 : 0; }
+
 static float frand(void)
 {
     fx_rng = fx_rng * 1664525u + 1013904223u;
@@ -138,6 +145,7 @@ static frag *new_frag(void)
  * its own velocity, white hot first, then its color, then gone. */
 void fx_sparks(float x, float y, float z, rgb color, int count, float speed)
 {
+    count = lvl(count);
     for (int i = 0; i < count; i++) {
         frag *f = new_frag();
         float a = frand() * 2 * PI, up = frand() * 0.9f - 0.2f;
@@ -154,6 +162,7 @@ void fx_sparks(float x, float y, float z, rgb color, int count, float speed)
 static void sparks_dir(float x, float y, float z, rgb color, int count, float speed, float dx, float dz,
                        float spread)
 {
+    count = lvl(count);
     for (int i = 0; i < count; i++) {
         frag *f = new_frag();
         float a = atan2f(dz, dx) + (frand() - 0.5f) * spread;
@@ -168,6 +177,7 @@ static void sparks_dir(float x, float y, float z, rgb color, int count, float sp
 
 void fx_ring(float x, float z, rgb color, float speed, float frames)
 {
+    if (fx_level == 0) return;
     int best = 0;
     for (int i = 0; i < MAX_RINGS; i++) {
         if (R[i].life <= 0) { best = i; break; }
@@ -185,6 +195,7 @@ void fx_ring(float x, float z, rgb color, float speed, float frames)
 
 void fx_shake(float amount)
 {
+    if (fx_level == 0) return;
     if (amount > shake) shake = amount;
 }
 
@@ -235,6 +246,7 @@ void fx_muzzle(float x, float z, float dx, float dz)
 
 void fx_shot_trail(float x, float z, float dx, float dz)
 {
+    if (fx_level < 2) return;
     frag *f = new_frag();
     f->p = vp_v3(x - dx * 4 + (frand() - 0.5f) * 1.5f, 7 + (frand() - 0.5f) * 1.5f, z - dz * 4 + (frand() - 0.5f) * 1.5f);
     f->v = vp_v3(-dx * 0.6f + (frand() - 0.5f) * 0.5f, (frand() - 0.5f) * 0.4f, -dz * 0.6f + (frand() - 0.5f) * 0.5f);
@@ -255,7 +267,7 @@ void fx_rescue(float x, float z)
 {
     fx_ring(x, z, mkrgb(255, 255, 255), 1.4f, 26);
     fx_ring(x, z, mkrgb(80, 200, 255), 0.8f, 34);
-    for (int i = 0; i < 24; i++) {          /* a rising spiral of embers */
+    for (int i = 0; i < lvl(24); i++) {     /* a rising spiral of embers */
         frag *f = new_frag();
         float a = i * 0.52f;
         f->p = vp_v3(x + cosf(a) * 4, 1 + i * 0.4f, z + sinf(a) * 4);
@@ -583,33 +595,62 @@ static void arena_into_scene(vp_dvg *d, double t)
 }
 
 /* The score, the men left and the wave, standing on the far wall. The row
- * keeps to the part of the wall the camera is looking at. */
-void render_wall_hud(vp_dvg *d, const world *w, int player, int players, double t)
+ * keeps to the part of the wall the camera is looking at. With two players
+ * both scores stand there, 1UP and 2UP, the one playing blinking. */
+void render_wall_hud(vp_dvg *d, const world *w1, const world *w2, int players, int current, double t)
 {
     char buf[32];
-    const float zb = ARENA_Z1 + 8, base = 10, h = 14;
-    const float row = 250;                      /* the whole row's width */
+    const world *w = current ? w2 : w1;
+    const float zb = ARENA_Z1 + 8, base = 10;
+    float h = 14, row = 250;                    /* letter height, the whole row's width */
     vp_vec3 right = vp_v3(1, 0, 0), up = vp_v3(0, 1, 0);
-    /* the point of the far wall in the middle of the screen */
-    float mid = CAM.target.x, best = 1e9f;
-    for (float x = ARENA_X0 - 60; x <= ARENA_X1 + 60; x += 4) {
+    /* the part of the far wall on the screen, and its middle */
+    float vis0 = 1e9f, vis1 = -1e9f, mid = CAM.target.x, best = 1e9f;
+    for (float x = ARENA_X0 - 200; x <= ARENA_X1 + 200; x += 2) {
         float sx, sy;
-        if (vp3d_project(&VIEW, vp_v3(x, base, zb), &sx, &sy) && fabsf(sx - W / 2.0f) < best) {
-            best = fabsf(sx - W / 2.0f);
-            mid = x;
+        if (!vp3d_project(&VIEW, vp_v3(x, base, zb), &sx, &sy)) continue;
+        if (sx >= 140 && sx <= W - 140) {
+            if (x < vis0) vis0 = x;
+            if (x > vis1) vis1 = x;
         }
+        if (fabsf(sx - W / 2.0f) < best) { best = fabsf(sx - W / 2.0f); mid = x; }
+    }
+    if (vis1 > vis0 && row > (vis1 - vis0) * 0.92f) {
+        /* the camera close: the row smaller, so it fits */
+        float k = (vis1 - vis0) * 0.92f / row;
+        row *= k;
+        h *= k;
     }
     float x0 = mid - row / 2;
     if (x0 < ARENA_X0 - 30) x0 = ARENA_X0 - 30;
     if (x0 > ARENA_X1 + 30 - row) x0 = ARENA_X1 + 30 - row;
+    if (vis1 > vis0) {
+        if (x0 < vis0) x0 = vis0;
+        if (x0 + row > vis1) x0 = vis1 - row;
+    }
 
-    vp_color(d, 255, 40, 60);
-    snprintf(buf, sizeof buf, players > 1 ? "SCORE%d" : "SCORE", player + 1);
-    font3d_text(d, &VIEW, buf, vp_v3(x0, base, zb), right, up, h, FONT3D_LEFT);
-    float sx = x0 + h * 0.8f * ((float)strlen(buf) + 0.6f);
-    vp_color(d, 60, 120, 255);
-    snprintf(buf, sizeof buf, "%d", w->score);
-    font3d_text(d, &VIEW, buf, vp_v3(sx, base, zb), right, up, h, FONT3D_LEFT);
+    if (players < 2) {
+        vp_color(d, 255, 40, 60);
+        font3d_text(d, &VIEW, "SCORE", vp_v3(x0, base, zb), right, up, h, FONT3D_LEFT);
+        vp_color(d, 60, 120, 255);
+        snprintf(buf, sizeof buf, "%d", w->score);
+        font3d_text(d, &VIEW, buf, vp_v3(x0 + h * 0.8f * 5.6f, base, zb), right, up, h, FONT3D_LEFT);
+    } else {
+        const world *ws[2] = { w1, w2 };
+        for (int p = 0; p < 2; p++) {
+            float px = p == 0 ? x0 : x0 + row * 0.42f;
+            int blink = p == current && ((int)(t * 3) & 1);
+            rgb c = p == 0 ? mkrgb(255, 40, 60) : mkrgb(60, 140, 255);
+            if (p != current) c = rgb_scale(c, 0.45f);
+            if (!blink) {
+                color(d, c);
+                font3d_text(d, &VIEW, p == 0 ? "1UP" : "2UP", vp_v3(px, base + h * 1.2f, zb), right, up, h * 0.7f, FONT3D_LEFT);
+            }
+            color(d, p == current ? mkrgb(255, 255, 255) : mkrgb(120, 120, 140));
+            snprintf(buf, sizeof buf, "%d", ws[p]->score);
+            font3d_text(d, &VIEW, buf, vp_v3(px, base, zb), right, up, h, FONT3D_LEFT);
+        }
+    }
 
     /* the men left: little figures standing on the wall */
     model_pose p;
@@ -620,15 +661,16 @@ void render_wall_hud(vp_dvg *d, const world *w, int player, int players, double 
     int men = w->lives - 1;
     if (men > 7) men = 7;           /* the original shows 7 at most */
     for (int i = 0; i < men; i++) {
-        p.x = x0 + row - 6 - i * 11.0f;
+        p.x = x0 + row - 6 - i * 11.0f * h / 14;
+        p.sxz = p.sy = h / 14;
         p.z = zb;
-        p.y = base;
+        p.y = base + (players > 1 ? h * 2.4f : 0);
         p.heading = PI + 0.4f * sinf((float)t * 2 + i);
         model_draw(d, &VIEW, NULL, MDL_PLAYER, &p);
     }
     vp_color(d, 80, 220, 120);
     snprintf(buf, sizeof buf, "WAVE %d", w->wave);
-    font3d_text(d, &VIEW, buf, vp_v3(x0 + row, base + 20, zb), right, up, 8, FONT3D_RIGHT);
+    font3d_text(d, &VIEW, buf, vp_v3(x0 + row, base + h * (players > 1 ? 1.7f : 1.4f), zb), right, up, h * 0.57f, FONT3D_RIGHT);
 }
 
 /* ---- things -------------------------------------------------------------- */

@@ -20,7 +20,7 @@ static const char *glyph(char c)
 {
     switch (c) {
     case '0': return "0228866026";
-    case '1': return "0117";
+    case '1': return "17681331";
     case '2': return "0225533668";
     case '3': return "02288635";
     case '4': return "033528";
