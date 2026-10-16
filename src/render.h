@@ -19,6 +19,21 @@ void fx_explode(float x, float y, float z, rgb color, float dirx, float dirz, in
 void fx_popup(float x, float z, int value);
 void fx_skull(float x, float z);
 void fx_flash(rgb color, float frames);   /* the border flashes */
+void fx_sparks(float x, float y, float z, rgb color, int count, float speed);
+void fx_ring(float x, float z, rgb color, float speed, float frames);   /* a shock wave */
+void fx_shake(float amount);                                            /* the camera jolts */
+void fx_banner(const char *s, rgb color, float frames);                 /* big zooming text */
+void fx_muzzle(float x, float z, float dx, float dz);
+void fx_shot_trail(float x, float z, float dx, float dz);
+void fx_wall_hit(float x, float z, float dx, float dz);
+void fx_rescue(float x, float z);
+void fx_player_dies(float x, float z);
+void fx_wave_start(float x, float z);
+void fx_fireworks(void);
+
+/* The stage's colors follow the wave (the original's ten wall colors). */
+void render_set_wave(int wave);
+rgb  render_laser_color(void);
 void fx_clear(void);
 void fx_step(void);                       /* one 60 Hz step */
 

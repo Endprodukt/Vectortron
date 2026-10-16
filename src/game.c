@@ -6,6 +6,7 @@
 #include "game.h"
 
 #include <math.h>
+#include <stdio.h>
 #include <string.h>
 
 #include "render.h"
@@ -134,6 +135,8 @@ static void add_score(world *w, int points)
         w->next_extra += w->extra_every;
         snd_play(SND_EXTRA_MAN);
         fx_flash(mkrgb(255, 255, 255), 40);
+        fx_banner("EXTRA MAN", mkrgb(255, 255, 255), 90);
+        fx_ring(w->px, w->pz, mkrgb(255, 255, 255), 2.5f, 40);
     }
 }
 
@@ -286,6 +289,12 @@ static void begin_turn(world *w)
     w->mat_len = w->transporter ? 150 : order + 70;
     w->ph = PH_MATERIALIZE;
     w->ph_time = 0;
+    render_set_wave(w->wave);
+    if (!w->demo) {
+        char buf[24];
+        snprintf(buf, sizeof buf, "WAVE %d", w->wave);
+        fx_banner(buf, render_laser_color(), 110);
+    }
     snd_play(SND_WAVE_START);
 }
 
@@ -534,6 +543,7 @@ static void player_fire(world *w, const controls *c)
         s->x = w->px + dx * 4;
         s->z = w->pz + dz * 4;
         snd_play_ex(SND_SHOT, 0.7f, 1.0f);
+        fx_muzzle(w->px, w->pz, dx, dz);
         return;
     }
     w->fire_count--;        /* four out: try again next frame */
@@ -558,6 +568,8 @@ static void hulk_knockback(world *w, int i, float dx, float dz)
     float kz = dz * ((rnd(w) < 0xC0) ? 2 : 1);
     if (inside(T_HULK, e->x + kx, e->z)) e->x += kx;
     if (inside(T_HULK, e->x, e->z + kz)) e->z += kz;
+    e->flash = 5;
+    fx_sparks(e->x, 10, e->z, mkrgb(120, 255, 120), 6, 1.6f);
     snd_play(SND_HULK_HIT);
 }
 
@@ -566,12 +578,15 @@ static void shots_step(world *w)
     for (int s = 0; s < MAX_SHOTS; s++) {
         shot *sh = &w->shots[s];
         if (!sh->live) continue;
+        fx_shot_trail(sh->x, sh->z, sh->dx, sh->dz);
         /* 6 pixels / 6 lines a frame, checked in two halves */
         for (int half = 0; half < 2 && sh->live; half++) {
             sh->x += sh->dx * 3;
             sh->z += sh->dz * 3;
             if (sh->x < ARENA_X0 || sh->x > ARENA_X1 || sh->z < ARENA_Z0 || sh->z > ARENA_Z1) {
                 sh->live = 0;
+                fx_wall_hit(fminf(fmaxf(sh->x, ARENA_X0), ARENA_X1), fminf(fmaxf(sh->z, ARENA_Z0), ARENA_Z1),
+                            sh->dx, sh->dz);
                 break;
             }
             int hit = -1, best = 99;
@@ -700,6 +715,8 @@ static void brain_step(world *w, int i)
         e->timer = 4;
         snd_play_ex(SND_REPROGRAM, 0.6f, 1.0f + 0.03f * (20 - e->count));
         if (--e->count > 0) return;
+        fx_ring(h->x, h->z, mkrgb(255, 80, 255), 1.0f, 30);
+        fx_sparks(h->x, 8, h->z, mkrgb(255, 80, 255), 16, 1.6f);
         h->type = T_PROG;
         h->state = 0;
         h->timer = 3;
@@ -826,6 +843,7 @@ static void spawn_enforcer(world *w, ent *s)
     e->timer2 = 0;
     e->timer3 = rmax(w, w->p[P_ENSTIM]);
     e->age = 0;
+    fx_sparks(e->x, 8, e->z, mkrgb(40, 255, 120), 10, 1.4f);
     snd_play(SND_ENFORCER_BIRTH);
 }
 
@@ -930,6 +948,7 @@ static void spawn_tank(world *w, ent *q)
     if (!t) return;
     init_tank(w, t, 0);
     t->age = 0;
+    fx_ring(t->x, t->z, mkrgb(255, 160, 40), 0.8f, 20);
     snd_play(SND_TANK_BIRTH);
 }
 
@@ -1108,7 +1127,7 @@ static void player_collide(world *w)
             w->ph = PH_DYING;
             w->ph_time = 0;
             snd_play(SND_PLAYER_DIE);
-            fx_flash(mkrgb(255, 255, 255), 60);
+            fx_player_dies(w->px, w->pz);
             return;
         }
     }
@@ -1120,6 +1139,7 @@ static void player_collide(world *w)
         if (w->rescued < 5) w->rescued++;
         add_score(w, 1000 * w->rescued);
         fx_popup(e->x, e->z, 1000 * w->rescued);
+        fx_rescue(e->x, e->z);
         snd_play(SND_RESCUE);
         removeat(w, i);
     }
@@ -1144,6 +1164,8 @@ static void game_exec(world *w)
         w->ph = PH_CLEARED;
         w->ph_time = 0;
         fx_flash(mkrgb(255, 255, 255), 30);
+        fx_banner("WAVE CLEARED", render_laser_color(), 100);
+        fx_fireworks();
     }
 }
 
@@ -1154,6 +1176,7 @@ void world_step(world *w, const controls *c)
     case PH_MATERIALIZE:
         for (int i = 0; i < w->n; i++) w->e[i].age++;
         if (w->ph_time >= w->mat_len) {
+            fx_wave_start(w->px, w->pz);
             w->ph = PH_PLAY;
             w->ph_time = 0;
             for (int i = 0; i < w->n; i++) if (w->e[i].age < 0) w->e[i].age = 0;
@@ -1180,6 +1203,7 @@ void world_step(world *w, const controls *c)
         ent *e = &w->e[i];
         if (e->type == T_NONE) continue;
         e->age++;
+        if (e->flash) e->flash--;
         switch (e->type) {
         case T_HULK:     hulk_step(w, i); break;
         case T_BRAIN:    brain_step(w, i); break;

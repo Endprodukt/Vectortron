@@ -239,26 +239,29 @@ static part *arm(model *md, float x, float shoulder, float len, float w, float h
 
 static void build_player(model *md)
 {
-    /* Robotron X's hero: white shirt, blue trousers, red hair */
-    rgb skin = mkrgb(255, 190, 150), blue = mkrgb(60, 120, 255), red = mkrgb(255, 80, 40);
-    colored(leg(md, -1.1f, 5.4f, 1.6f, 1.7f, 2.6f, 1), blue);
-    colored(leg(md, 1.1f, 5.4f, 1.6f, 1.7f, 2.6f, 0), blue);
+    /* the original's hero: a big red-orange head, a slim white body and
+     * legs, magenta arms (the Robotron player sprite) */
+    rgb orange = mkrgb(255, 110, 20), red = mkrgb(255, 30, 20), magenta = mkrgb(255, 40, 255);
+    leg(md, -0.8f, 5.6f, 1.2f, 1.3f, 2.2f, 1);
+    leg(md, 0.8f, 5.6f, 1.2f, 1.3f, 2.2f, 0);
     vp3d_mesh *t = mesh_new();
-    add_taper(t, 0, 7.8f, 0, 3.6f, 4.8f, 2.2f, 4.6f, 2.6f);   /* shirt */
+    add_taper(t, 0, 8.0f, 0, 2.4f, 4.8f, 1.8f, 2.8f, 2.0f);   /* the white body */
     solid(md, t);
     vp3d_mesh *h = mesh_new();
-    add_box(h, 0, 11.4f, 0, 2.6f, 2.8f, 2.6f);                 /* head */
-    colored(solid(md, h), skin);
+    add_box(h, 0, 12.0f, 0, 3.6f, 2.8f, 3.4f);                 /* the big head */
+    colored(solid(md, h), orange);
     vp3d_mesh *hair = mesh_new();
-    add_box(hair, 0, 13.0f, -0.3f, 3.0f, 0.8f, 3.0f);
-    add_box(hair, 0, 12.0f, -1.5f, 3.0f, 2.2f, 0.6f);
-    detail(colored(solid(md, hair), red));
-    vp3d_mesh *belt = mesh_new();
-    add_box(belt, 0, 5.6f, 0, 3.9f, 0.7f, 2.4f);
-    detail(colored(solid(md, belt), mkrgb(255, 220, 0)));
-    colored(arm(md, -2.9f, 9.9f, 4.2f, 1.2f, 1.3f, 1), skin);
-    colored(arm(md, 2.9f, 9.9f, 4.2f, 1.2f, 1.3f, 0), skin);
-    md->height = 13.5f;
+    add_box(hair, 0, 13.7f, -0.2f, 4.6f, 1.0f, 4.0f);          /* the red mop on top */
+    add_box(hair, -2.1f, 12.4f, -0.2f, 0.7f, 2.0f, 3.6f);      /* and at the sides */
+    add_box(hair, 2.1f, 12.4f, -0.2f, 0.7f, 2.0f, 3.6f);
+    colored(solid(md, hair), red);
+    vp3d_mesh *eyes = mesh_new();                              /* the dark eyes */
+    add_box(eyes, -0.8f, 12.3f, 1.75f, 0.7f, 0.7f, 0.2f);
+    add_box(eyes, 0.8f, 12.3f, 1.75f, 0.7f, 0.7f, 0.2f);
+    detail(colored(solid(md, eyes), mkrgb(90, 0, 0)));
+    colored(arm(md, -2.0f, 10.0f, 4.0f, 1.0f, 1.2f, 1), magenta);
+    colored(arm(md, 2.0f, 10.0f, 4.0f, 1.0f, 1.2f, 0), magenta);
+    md->height = 14.5f;
     md->color = mkrgb(255, 255, 255);
 }
 

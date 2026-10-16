@@ -27,6 +27,13 @@ siehe [docs/robotron-rules.md](docs/robotron-rules.md).
   Original (übrige Enforcer werden wieder zu Spheroids).
 * Wellenstart mit „Materialisieren“ (Brain-Wellen: Transporter-Effekt),
   zwischen den Wellen der Rechteck-Tunnel.
+* Jede Welle hat ihre eigenen Farben (Wand, Boden, Laser), im Zehnerzyklus
+  wie die Wandfarben des Originals; Schüsse an der Wand lassen sie in der
+  Laserfarbe aufblitzen.
+* Effekte im Stil von Tempest 2000: Plasmaschüsse mit Funkenschweif und
+  Mündungsfeuer, Funkenregen und Schockwellen bei jedem Treffer,
+  Kamerawackeln, aufzoomende Banner (WAVE, WAVE CLEARED, EXTRA MAN),
+  Feuerwerk am Wellenende, Glitzerspirale bei jeder Rettung.
 * 1 oder 2 Spieler abwechselnd, Münzen/Credits mit START-Lampen, Hall of
   Fame mit Initialen (erscheint auch im VectorPie-Menü), Attract-Mode mit
   Titel, Gegnervorstellung, Bestenliste und Demo-Spiel.

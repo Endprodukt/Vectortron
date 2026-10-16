@@ -29,29 +29,69 @@ static struct {
     float   pvx, pvz, lastx, lastz;
 } CAM;
 
+/* ---- the stage's colors --------------------------------------------------- */
+
+/* The original gives every wave its own wall color and its own laser flash
+ * color, in a cycle of ten (GTWCOL, RRG23.ASM:373-401). The palette's RGB
+ * values are not in the source; these follow its spirit. */
+typedef struct { rgb wall, floor, laser; } stage;
+
+static const stage STAGES[10] = {
+    { {255,   0, 200}, {150, 130,  40}, {255, 255, 255} },
+    { {  0, 200, 255}, { 40,  90, 170}, {255, 255,   0} },
+    { {255,  70,   0}, {150,  60,  20}, {  0, 255, 255} },
+    { {  0, 255,  90}, { 30, 130,  60}, {255,   0, 255} },
+    { {255, 230,   0}, {130, 115,  20}, {255,  80,  80} },
+    { {130,  80, 255}, { 80,  55, 150}, {120, 255, 120} },
+    { {255,   0,  60}, {140,  20,  50}, {255, 255, 255} },
+    { {  0, 255, 255}, { 20, 115, 125}, {255, 160,   0} },
+    { {255, 140,   0}, {140,  85,  20}, {160, 160, 255} },
+    { {255, 255, 255}, { 95,  95, 120}, {255,   0, 128} },
+};
+
+static int stage_index;
+
+static const stage *ST(void) { return &STAGES[stage_index]; }
+
+void render_set_wave(int wave) { stage_index = ((wave > 0 ? wave : 1) - 1) % 10; }
+
+rgb render_laser_color(void) { return ST()->laser; }
+
 /* ---- effects ------------------------------------------------------------- */
 
-#define MAX_FRAGS  600
+#define MAX_FRAGS  700
+#define MAX_RINGS  24
 #define MAX_POPUPS 24
 #define MAX_SKULLS 16
 
+enum { FR_DEBRIS, FR_SPARK, FR_EMBER };
+
 typedef struct {
     vp_vec3 p, v;
-    float   ax, az;      /* half the segment, rotating */
+    float   ax, az;      /* debris: half the segment, rotating */
     float   rot, vrot;
     float   life, max;
     rgb     c;
+    int     kind;
 } frag;
+
+/* a shock wave: a circle on the floor, growing and fading */
+typedef struct { float x, y, z, r, vr, life, max; rgb c; } ring;
 
 typedef struct { float x, z, life; int value; } popup;
 typedef struct { float x, z, life; } skull;
 
 static frag   F[MAX_FRAGS];
 static int    nF;
+static ring   R[MAX_RINGS];
 static popup  P[MAX_POPUPS];
 static skull  K[MAX_SKULLS];
 static float  flash_time;
 static rgb    flash_color;
+static float  shake;
+static char   banner[32];
+static rgb    banner_color;
+static float  banner_time, banner_max;
 static unsigned fx_rng = 777;
 
 static float frand(void)
@@ -73,20 +113,88 @@ void render_init(void)
 void fx_clear(void)
 {
     nF = 0;
+    memset(R, 0, sizeof R);
     memset(P, 0, sizeof P);
     memset(K, 0, sizeof K);
     flash_time = 0;
+    shake = 0;
+    banner_time = 0;
+}
+
+static frag *new_frag(void)
+{
+    if (nF < MAX_FRAGS) return &F[nF++];
+    return &F[(int)(frand() * MAX_FRAGS)];
+}
+
+/* Bright streaks thrown out fast, Tempest 2000 style: each is drawn along
+ * its own velocity, white hot first, then its color, then gone. */
+void fx_sparks(float x, float y, float z, rgb color, int count, float speed)
+{
+    for (int i = 0; i < count; i++) {
+        frag *f = new_frag();
+        float a = frand() * 2 * PI, up = frand() * 0.9f - 0.2f;
+        float s = speed * (0.4f + frand() * 0.8f);
+        f->p = vp_v3(x, y, z);
+        f->v = vp_v3(cosf(a) * s, up * s, sinf(a) * s);
+        f->kind = FR_SPARK;
+        f->max = f->life = 12 + frand() * 18;
+        f->c = color;
+    }
+}
+
+/* Sparks in a cone along (dx, dz): a muzzle flash, a shot hitting a wall. */
+static void sparks_dir(float x, float y, float z, rgb color, int count, float speed, float dx, float dz,
+                       float spread)
+{
+    for (int i = 0; i < count; i++) {
+        frag *f = new_frag();
+        float a = atan2f(dz, dx) + (frand() - 0.5f) * spread;
+        float s = speed * (0.5f + frand() * 0.8f);
+        f->p = vp_v3(x, y, z);
+        f->v = vp_v3(cosf(a) * s, (frand() - 0.3f) * s * 0.5f, sinf(a) * s);
+        f->kind = FR_SPARK;
+        f->max = f->life = 6 + frand() * 10;
+        f->c = color;
+    }
+}
+
+void fx_ring(float x, float z, rgb color, float speed, float frames)
+{
+    int best = 0;
+    for (int i = 0; i < MAX_RINGS; i++) {
+        if (R[i].life <= 0) { best = i; break; }
+        if (R[i].life < R[best].life) best = i;
+    }
+    ring *r = &R[best];
+    r->x = x;
+    r->y = 0.5f;
+    r->z = z;
+    r->r = 2;
+    r->vr = speed;
+    r->max = r->life = frames;
+    r->c = color;
+}
+
+void fx_shake(float amount)
+{
+    if (amount > shake) shake = amount;
+}
+
+void fx_banner(const char *s, rgb color, float frames)
+{
+    snprintf(banner, sizeof banner, "%s", s);
+    banner_color = color;
+    banner_max = banner_time = frames;
 }
 
 /* The original blows a robot apart along the shot: slices fly out mostly
- * the way the shot was going. Here: short spinning segments, thrown along
- * (dirx, dirz) and a little up. */
+ * the way the shot was going. Here: spinning debris thrown along (dirx,
+ * dirz), a spray of sparks, a shock wave on the floor and a jolt. */
 void fx_explode(float x, float y, float z, rgb color, float dirx, float dirz, int pieces, float size)
 {
     for (int i = 0; i < pieces; i++) {
-        frag *f;
-        if (nF < MAX_FRAGS) f = &F[nF++];
-        else f = &F[(int)(frand() * MAX_FRAGS)];
+        frag *f = new_frag();
         float along = (frand() * 2 - 1) * 2.2f;
         float side = (frand() * 2 - 1) * 0.7f;
         f->p = vp_v3(x + (frand() - 0.5f) * size * 0.5f, y + frand() * size, z + (frand() - 0.5f) * size * 0.5f);
@@ -105,6 +213,74 @@ void fx_explode(float x, float y, float z, rgb color, float dirx, float dirz, in
         f->vrot = (frand() - 0.5f) * 0.5f;
         f->max = f->life = 30 + frand() * 25;
         f->c = color;
+        f->kind = FR_DEBRIS;
+    }
+    fx_sparks(x, y + size * 0.5f, z, color, pieces + pieces / 2, 2.2f + size * 0.08f);
+    fx_sparks(x, y + size * 0.5f, z, mkrgb(255, 255, 255), pieces / 3 + 1, 3.0f);
+    fx_ring(x, z, color, 0.9f + size * 0.04f, 22);
+    fx_shake(size > 14 ? 2.5f : 1.0f);
+}
+
+void fx_muzzle(float x, float z, float dx, float dz)
+{
+    sparks_dir(x + dx * 5, 7, z + dz * 5, ST()->laser, 3, 2.2f, dx, dz, 1.2f);
+}
+
+void fx_shot_trail(float x, float z, float dx, float dz)
+{
+    frag *f = new_frag();
+    f->p = vp_v3(x - dx * 4 + (frand() - 0.5f) * 1.5f, 7 + (frand() - 0.5f) * 1.5f, z - dz * 4 + (frand() - 0.5f) * 1.5f);
+    f->v = vp_v3(-dx * 0.6f + (frand() - 0.5f) * 0.5f, (frand() - 0.5f) * 0.4f, -dz * 0.6f + (frand() - 0.5f) * 0.5f);
+    f->kind = FR_SPARK;
+    f->max = f->life = 6 + frand() * 6;
+    f->c = ST()->laser;
+}
+
+/* A shot hitting the wall: sparks back off it, and the wall flashes in the
+ * wave's laser color (the original's laser-wall flash). */
+void fx_wall_hit(float x, float z, float dx, float dz)
+{
+    sparks_dir(x, 7, z, ST()->laser, 8, 2.0f, -dx, -dz, 2.4f);
+    fx_flash(ST()->laser, 4);
+}
+
+void fx_rescue(float x, float z)
+{
+    fx_ring(x, z, mkrgb(255, 255, 255), 1.4f, 26);
+    fx_ring(x, z, mkrgb(80, 200, 255), 0.8f, 34);
+    for (int i = 0; i < 24; i++) {          /* a rising spiral of embers */
+        frag *f = new_frag();
+        float a = i * 0.52f;
+        f->p = vp_v3(x + cosf(a) * 4, 1 + i * 0.4f, z + sinf(a) * 4);
+        f->v = vp_v3(cosf(a + 1.6f) * 0.5f, 0.45f + frand() * 0.3f, sinf(a + 1.6f) * 0.5f);
+        f->kind = FR_EMBER;
+        f->max = f->life = 30 + frand() * 20;
+        f->c = (i & 1) ? mkrgb(255, 255, 120) : mkrgb(120, 220, 255);
+    }
+}
+
+void fx_player_dies(float x, float z)
+{
+    static const rgb C[4] = { {255,255,255}, {255,60,60}, {255,230,0}, {80,160,255} };
+    for (int k = 0; k < 4; k++) fx_sparks(x, 7, z, C[k], 30, 2.0f + k * 0.6f);
+    for (int k = 0; k < 3; k++) fx_ring(x, z, C[k + 1], 1.0f + k * 0.7f, 40 + k * 10);
+    fx_shake(6);
+    fx_flash(mkrgb(255, 255, 255), 30);
+}
+
+void fx_wave_start(float x, float z)
+{
+    for (int k = 0; k < 3; k++) fx_ring(x, z, ST()->wall, 2.2f + k * 0.8f, 60);
+}
+
+void fx_fireworks(void)
+{
+    for (int k = 0; k < 6; k++) {
+        float x = ARENA_X0 + 30 + frand() * (ARENA_X1 - ARENA_X0 - 60);
+        float z = ARENA_Z0 + 30 + frand() * (ARENA_Z1 - ARENA_Z0 - 60);
+        rgb c = STAGES[(int)(frand() * 10)].wall;
+        fx_sparks(x, 20 + frand() * 20, z, c, 26, 2.4f);
+        fx_ring(x, z, c, 1.6f, 30);
     }
 }
 
@@ -131,6 +307,7 @@ void fx_skull(float x, float z)
     K[best].x = x;
     K[best].z = z;
     K[best].life = 90;          /* 90 frames, as the original */
+    fx_ring(x, z, mkrgb(255, 40, 40), 0.7f, 30);
 }
 
 void fx_flash(rgb color, float frames)
@@ -139,25 +316,55 @@ void fx_flash(rgb color, float frames)
     flash_time = frames;
 }
 
+static void keep_inside(frag *f)
+{
+    if (f->p.x < ARENA_X0 - 3 || f->p.x > ARENA_X1 + 3) {
+        f->v.x = -f->v.x * 0.5f;
+        f->p.x = f->p.x < ARENA_X0 ? ARENA_X0 - 3 : ARENA_X1 + 3;
+    }
+    if (f->p.z < ARENA_Z0 - 3 || f->p.z > ARENA_Z1 + 3) {
+        f->v.z = -f->v.z * 0.5f;
+        f->p.z = f->p.z < ARENA_Z0 ? ARENA_Z0 - 3 : ARENA_Z1 + 3;
+    }
+}
+
 void fx_step(void)
 {
     for (int i = 0; i < nF; ) {
         frag *f = &F[i];
         f->p = vp_v3_add(f->p, f->v);
-        f->v.y -= 0.06f;
-        if (f->p.y < 0) { f->p.y = 0; f->v.y = -f->v.y * 0.4f; f->v.x *= 0.7f; f->v.z *= 0.7f; }
-        /* the walls stop debris too */
-        if (f->p.x < ARENA_X0 || f->p.x > ARENA_X1) { f->v.x = -f->v.x * 0.5f; f->p.x = f->p.x < ARENA_X0 ? ARENA_X0 : ARENA_X1; }
-        if (f->p.z < ARENA_Z0 || f->p.z > ARENA_Z1) { f->v.z = -f->v.z * 0.5f; f->p.z = f->p.z < ARENA_Z0 ? ARENA_Z0 : ARENA_Z1; }
-        f->v.x *= 0.97f;
-        f->v.z *= 0.97f;
-        f->rot += f->vrot;
+        switch (f->kind) {
+        case FR_DEBRIS:
+            f->v.y -= 0.06f;
+            if (f->p.y < 0) { f->p.y = 0; f->v.y = -f->v.y * 0.4f; f->v.x *= 0.7f; f->v.z *= 0.7f; }
+            f->v.x *= 0.97f;
+            f->v.z *= 0.97f;
+            f->rot += f->vrot;
+            break;
+        case FR_SPARK:
+            f->v.y -= 0.03f;
+            if (f->p.y < 0) { f->p.y = 0; f->v.y = -f->v.y * 0.5f; }
+            f->v = vp_v3_scale(f->v, 0.93f);
+            break;
+        default:        /* embers rise and slow */
+            f->v = vp_v3_scale(f->v, 0.98f);
+            break;
+        }
+        keep_inside(f);
         if (--f->life <= 0) F[i] = F[--nF];
         else i++;
+    }
+    for (int i = 0; i < MAX_RINGS; i++) {
+        if (R[i].life <= 0) continue;
+        R[i].r += R[i].vr;
+        R[i].life--;
     }
     for (int i = 0; i < MAX_POPUPS; i++) if (P[i].life > 0) P[i].life--;
     for (int i = 0; i < MAX_SKULLS; i++) if (K[i].life > 0) K[i].life--;
     if (flash_time > 0) flash_time--;
+    if (banner_time > 0) banner_time--;
+    shake *= 0.88f;
+    if (shake < 0.05f) shake = 0;
 }
 
 /* ---- the camera ---------------------------------------------------------- */
@@ -224,9 +431,9 @@ void render_camera(const world *w, int mode, int snap)
         if (w->ph == PH_MATERIALIZE && w->mat_len > 0) {
             /* swoop in from high and round to the side */
             float u = (float)w->ph_time / w->mat_len, k = (1 - u) * (1 - u);
-            yaw += k * 1.3f;
-            pitch += k * 0.45f;
-            dist *= 1 + k * 0.9f;
+            yaw += k * 0.8f;
+            pitch += k * 0.3f;
+            dist *= 1 + k * 0.7f;
         } else if (w->ph == PH_DYING) {
             /* close in on the player and circle */
             float k = w->ph_time / 150.0f;
@@ -257,11 +464,17 @@ void render_camera(const world *w, int mode, int snap)
         CAM.dist = approach(CAM.dist, dist, k * 0.8f);
     }
     VIEW.fov_deg = fov;
+    vp_vec3 look = CAM.target;
+    if (shake > 0) {
+        look.x += (frand() - 0.5f) * shake * 2;
+        look.y += (frand() - 0.5f) * shake;
+        look.z += (frand() - 0.5f) * shake * 2;
+    }
     float cp = cosf(CAM.pitch), sp = sinf(CAM.pitch);
-    vp_vec3 eye = vp_v3(CAM.target.x - sinf(CAM.yaw) * cp * CAM.dist,
-                        CAM.target.y + sp * CAM.dist,
-                        CAM.target.z - cosf(CAM.yaw) * cp * CAM.dist);
-    vp3d_look_at(&VIEW, eye, CAM.target, vp_v3(0, 1, 0));
+    vp_vec3 eye = vp_v3(look.x - sinf(CAM.yaw) * cp * CAM.dist,
+                        look.y + sp * CAM.dist,
+                        look.z - cosf(CAM.yaw) * cp * CAM.dist);
+    vp3d_look_at(&VIEW, eye, look, vp_v3(0, 1, 0));
     VIEW.fog_start = CAM.dist * 0.75f;
     VIEW.fog_end = CAM.dist * 2.3f;
     VIEW.fog_floor = 0.3f;
@@ -307,7 +520,10 @@ static void arena_into_scene(vp_dvg *d, double t)
     /* the floor: tiles with a gap between them, as in Robotron X; walked in
      * a snake so the beam's jumps stay short */
     const float tw = (x1 - x0) / TILES_X, td = (z1 - z0) / TILES_Z, gap = 1.6f;
-    vp_color(d, 150, 130, 40);
+    /* the wave's floor color; it glows up when something flashes */
+    rgb fl = ST()->floor;
+    if (flash_time > 0) fl = mkrgb(fl.r + (255 - fl.r) / 3, fl.g + (255 - fl.g) / 3, fl.b + (255 - fl.b) / 3);
+    color(d, fl);
     if (FLOOR == 1) {
         for (int i = 1; i < TILES_X; i++) {
             float x = x0 + i * tw;
@@ -334,8 +550,8 @@ static void arena_into_scene(vp_dvg *d, double t)
 
     /* the border: a low magenta wall that flashes on events; solid, so the
      * near wall hides the feet of whoever stands behind it */
-    rgb c = flash_time > 0 && ((int)flash_time / 3) % 2 ? flash_color
-          : hsv(0.83f + 0.03f * sinf((float)t * 0.7f), 0.85f, 1.0f);
+    rgb c = flash_time > 0 && ((int)flash_time / 3) % 2 == 0 ? flash_color
+          : rgb_scale(ST()->wall, 0.8f + 0.2f * sinf((float)t * 3.0f));
     color(d, c);
     vp_vec3 lo[4] = { vp_v3(x0, 0, z0), vp_v3(x1, 0, z0), vp_v3(x1, 0, z1), vp_v3(x0, 0, z1) };
     for (int i = 0; i < 4; i++) {
@@ -531,6 +747,10 @@ void render_world(vp_dvg *d, const world *w, double t)
             vp_color(d, 140, 60, 255);
             vp3d_scene_line(SCENE, vp_v3(e->x, pose.y, e->z), vp_v3(e->x - e->vx * 8, pose.y, e->z - e->vz * 8));
         }
+        if (e->flash > 0) {             /* just hit: white */
+            pose.flat_color = 1;
+            pose.color = mkrgb(255, 255, 255);
+        }
         if (is_human(e->type) && e->state == 1) {
             /* a human a brain has caught: flashing, shaking */
             pose.flat_color = 1;
@@ -581,13 +801,51 @@ void render_world(vp_dvg *d, const world *w, double t)
         model_draw(d, &VIEW, SCENE, MDL_PLAYER, &pose);
     }
 
-    /* the player's shots: bright streaks */
-    vp_color(d, 255, 255, 255);
+    /* the player's shots: plasma bolts. A white-hot core drawn twice (the
+     * beam's own way of being brighter), two strands in the wave's laser
+     * color either side, and a spinning star at the head. */
     for (int i = 0; i < MAX_SHOTS; i++) {
         const shot *s = &w->shots[i];
         if (!s->live) continue;
-        vp3d_scene_line(SCENE, vp_v3(s->x - s->dx * 5, 7, s->z - s->dz * 5),
-                        vp_v3(s->x + s->dx * 3, 7, s->z + s->dz * 3));
+        float l = sqrtf(s->dx * s->dx + s->dz * s->dz);
+        float ux = s->dx / l, uz = s->dz / l, nx = -uz, nz = ux;
+        const float y = 7;
+        vp_vec3 head = vp_v3(s->x + ux * 5, y, s->z + uz * 5);
+        vp_vec3 tail = vp_v3(s->x - ux * 14, y, s->z - uz * 14);
+        vp_color(d, 255, 255, 255);
+        vp3d_scene_line(SCENE, tail, head);
+        vp3d_scene_line(SCENE, head, tail);
+        color(d, ST()->laser);
+        for (int k = -1; k <= 1; k += 2) {
+            vp3d_scene_line(SCENE, vp_v3(s->x - ux * 10 + nx * k * 1.8f, y + k * 0.8f, s->z - uz * 10 + nz * k * 1.8f),
+                            vp_v3(s->x + ux * 3.5f + nx * k * 0.8f, y, s->z + uz * 3.5f + nz * k * 0.8f));
+            vp3d_scene_line(SCENE, vp_v3(s->x - ux * 6 + nx * k * 0.8f, y - k * 1.0f, s->z - uz * 6 + nz * k * 0.8f),
+                            vp_v3(s->x + ux * 4 + nx * k * 0.3f, y, s->z + uz * 4 + nz * k * 0.3f));
+        }
+        vp_color(d, 255, 255, 255);
+        float a = (float)t * 25 + i;
+        float r = 3.8f;
+        for (int k = 0; k < 4; k++) {
+            float b = a + k * PI / 4;
+            vp3d_scene_line(SCENE, vp_v3(head.x + cosf(b) * r, y + sinf(b) * r * 0.8f, head.z + sinf(b) * r * 0.4f),
+                            vp_v3(head.x - cosf(b) * r, y - sinf(b) * r * 0.8f, head.z - sinf(b) * r * 0.4f));
+        }
+    }
+
+    /* shock waves on the floor */
+    for (int i = 0; i < MAX_RINGS; i++) {
+        const ring *r = &R[i];
+        if (r->life <= 0) continue;
+        float k = r->life / r->max;
+        color(d, rgb_scale(k > 0.8f ? mkrgb(255, 255, 255) : r->c, k * 1.3f));
+        const int n = r->r > 25 ? 20 : 14;
+        vp_vec3 prev = vp_v3(r->x + r->r, r->y, r->z);
+        for (int j = 1; j <= n; j++) {
+            float a = 2 * PI * j / n;
+            vp_vec3 p = vp_v3(r->x + cosf(a) * r->r, r->y, r->z + sinf(a) * r->r);
+            vp3d_scene_line(SCENE, prev, p);
+            prev = p;
+        }
     }
 
     /* skulls where humans died */
@@ -604,15 +862,26 @@ void render_world(vp_dvg *d, const world *w, double t)
         model_draw(d, &VIEW, SCENE, MDL_SKULL, &pose);
     }
 
-    /* debris */
+    /* debris, sparks and embers */
     rgb last = mkrgb(1, 2, 3);
     for (int i = 0; i < nF; i++) {
         const frag *f = &F[i];
-        rgb c = rgb_scale(f->c, f->life / f->max * 1.4f);
+        float k = f->life / f->max;
+        rgb c;
+        if (f->kind == FR_DEBRIS) c = rgb_scale(f->c, k * 1.4f);
+        else if (k > 0.75f) c = mkrgb(255, 255, 255);               /* white hot */
+        else c = rgb_scale(f->c, k * 1.6f);
         if (c.r != last.r || c.g != last.g || c.b != last.b) { color(d, c); last = c; }
-        float cr = cosf(f->rot), sr = sinf(f->rot);
-        float ax = f->ax * cr - f->az * sr, az = f->ax * sr + f->az * cr;
-        vp3d_scene_line(SCENE, vp_v3(f->p.x - ax, f->p.y, f->p.z - az), vp_v3(f->p.x + ax, f->p.y + 1, f->p.z + az));
+        if (f->kind == FR_DEBRIS) {
+            float cr = cosf(f->rot), sr = sinf(f->rot);
+            float ax = f->ax * cr - f->az * sr, az = f->ax * sr + f->az * cr;
+            vp3d_scene_line(SCENE, vp_v3(f->p.x - ax, f->p.y, f->p.z - az), vp_v3(f->p.x + ax, f->p.y + 1, f->p.z + az));
+        } else if (f->kind == FR_SPARK) {
+            /* a streak along its flight */
+            vp3d_scene_line(SCENE, f->p, vp_v3_sub(f->p, vp_v3_scale(f->v, 2.5f)));
+        } else {
+            vp3d_scene_line(SCENE, vp_v3(f->p.x, f->p.y - 0.7f, f->p.z), vp_v3(f->p.x, f->p.y + 0.7f, f->p.z));
+        }
     }
 
     vp3d_scene_end(SCENE);
@@ -626,6 +895,20 @@ void render_world(vp_dvg *d, const world *w, double t)
         char buf[16];
         snprintf(buf, sizeof buf, "%d", P[i].value);
         text(d, rgb_scale(hsv((float)t * 1.5f, 0.6f, 1), P[i].life / 20.0f), buf, sx, sy, 70, VP_TEXT_CENTER);
+    }
+
+    /* a banner (WAVE CLEARED, EXTRA MAN): zooms out of the middle with a
+     * trail of echoes, Tempest 2000 style */
+    if (banner_time > 0) {
+        float u = 1 - banner_time / banner_max;
+        float grow = u < 0.25f ? u / 0.25f : 1 + (u - 0.25f) * 0.25f;
+        float fade = u > 0.8f ? (1 - u) / 0.2f : 1;
+        for (int k = 3; k >= 0; k--) {
+            float h = 260 * grow * (1 - k * 0.12f);
+            rgb c = k ? rgb_scale(hsv((float)t * 2 + k * 0.15f, 0.9f, 1), 0.5f * fade)
+                      : rgb_scale(banner_color, fade);
+            text(d, c, banner, W / 2.0f, 2350 - h / 2 + k * 40, h, VP_TEXT_CENTER);
+        }
     }
 }
 

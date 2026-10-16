@@ -46,6 +46,7 @@ typedef struct {
     uint8_t type;
     uint8_t state;      /* a phase of its life (spheroid, quark, brain...) */
     uint8_t axis;       /* hulk, prog: the axis it moves on */
+    uint8_t flash;      /* frames it shows white (hit) */
     int16_t target;     /* what it chases (an index), -1 the player */
     float   x, z;       /* its center */
     float   vx, vz;     /* velocity, per frame */
