@@ -78,7 +78,7 @@ static void start_game(int players)
     }
     fx_clear();
     vp_lamps_set(0);
-    snd_play(SND_START);
+    snd_play(players > 1 ? SND_START2 : SND_START);
     render_camera(&G.pw[0], SET.camera, 1);
 }
 
@@ -211,6 +211,7 @@ static void step_play(vp_input *in)
 static void update(vp_game *g, float dt)
 {
     vp_input *in = vp_game_input(g);
+    snd_tick();
     if (vp_credits_update(&G.credits, in)) snd_play(SND_COIN);
     G.time += dt;
 

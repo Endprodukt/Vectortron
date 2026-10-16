@@ -1,5 +1,7 @@
 /* sound.c — the game's sounds, made in code (or loaded, when a file is there). */
 #include "sound.h"
+#include "romzip.h"
+#include "williams.h"
 
 #include <math.h>
 #include <stdio.h>
@@ -18,7 +20,60 @@ static const char *const NAMES[SND_COUNT] = {
     "enforcer_shot", "enforcer_die", "quark_die", "tank_birth", "tank_shot",
     "shell_bounce", "tank_die", "player_die", "wave_start", "wave_end",
     "extra_man", "coin", "start", "grunt_step", "reprogram", "small_die",
+    "spark_die", "shell_die", "prog_die", "transport", "start2",
 };
+
+/* ---- the original sounds: the sound tables of the game's source ----------
+ * {priority, steps of (repeat, frames, sound number)}; RRG23, RRS22, RRP8,
+ * RRH11, RRB10, RRC11, RRTK4 and RRT2.ASM. A priority of 0: no sound. */
+typedef struct { int pri, n; wms_step s[3]; } orig;
+
+static const orig ORIG[SND_COUNT] = {
+    [SND_SHOT]           = { 0xD0, 1, { {1, 8, 0x01} } },                        /* LASSND */
+    [SND_GRUNT_DIE]      = { 0xD0, 2, { {1, 12, 0x14}, {1, 8, 0x17} } },         /* RBSND */
+    [SND_ELECTRODE_DIE]  = { 0xD0, 1, { {1, 8, 0x17} } },                        /* PSKSND */
+    [SND_HULK_HIT]       = { 0xD0, 1, { {1, 16, 0x06} } },                       /* HKHSND */
+    [SND_RESCUE]         = { 0xE0, 1, { {1, 32, 0x0D} } },                       /* SAVSND */
+    [SND_HUMAN_DIE]      = { 0xE0, 1, { {1, 24, 0x1A} } },                       /* HKSND */
+    [SND_PROG_MAKE]      = { 0xD8, 1, { {1, 8, 0x11} } },                        /* HPSND */
+    [SND_BRAIN_DIE]      = { 0xD0, 2, { {1, 4, 0x14}, {1, 8, 0x11} } },          /* BKSND */
+    [SND_CRUISE]         = { 0xC8, 2, { {1, 8, 0x15}, {1, 8, 0x14} } },          /* BSHSND */
+    [SND_SPHEROID_DIE]   = { 0xD1, 1, { {1, 8, 0x08} } },                        /* CRKSND */
+    [SND_ENFORCER_BIRTH] = { 0xD8, 1, { {1, 8, 0x18} } },                        /* ENDSND */
+    [SND_ENFORCER_SHOT]  = { 0xD0, 1, { {1, 8, 0x1D} } },                        /* ENFSND */
+    [SND_ENFORCER_DIE]   = { 0xD0, 1, { {3, 4, 0x17} } },                        /* ENKSND */
+    [SND_QUARK_DIE]      = { 0xD0, 2, { {1, 4, 0x15}, {1, 8, 0x11} } },          /* SQKSND */
+    [SND_TANK_BIRTH]     = { 0xD0, 1, { {1, 8, 0x19} } },                        /* TKDSND */
+    [SND_TANK_SHOT]      = { 0xC8, 1, { {1, 8, 0x04} } },                        /* TKFSND */
+    [SND_SHELL_BOUNCE]   = { 0xC8, 2, { {1, 4, 0x14}, {1, 1, 0x13} } },          /* SRBSND */
+    [SND_TANK_DIE]       = { 0xD0, 1, { {1, 8, 0x11} } },                        /* TNKSND */
+    [SND_PLAYER_DIE]     = { 0xEE, 2, { {2, 8, 0x11}, {1, 32, 0x17} } },         /* PDSND */
+    [SND_WAVE_START]     = { 0, 0, { {0, 0, 0} } },                              /* silent in the original */
+    [SND_WAVE_END]       = { 0xE0, 1, { {29, 4, 0x0E} } },                       /* WVSND */
+    [SND_EXTRA_MAN]      = { 0xEF, 1, { {1, 32, 0x1E} } },                       /* RPSND */
+    [SND_COIN]           = { 0xFF, 1, { {1, 32, 0x0C} } },                       /* CNSND (one of 8) */
+    [SND_START]          = { 0xF0, 1, { {1, 16, 0x28} } },                       /* ST1SND */
+    [SND_GRUNT_STEP]     = { 0xC0, 1, { {1, 10, 0x06} } },                       /* RMVSND */
+    [SND_REPROGRAM]      = { 0xD0, 1, { {2, 3, 0x12} } },                        /* PRGSND */
+    [SND_SMALL_DIE]      = { 0xD0, 1, { {2, 4, 0x17} } },                        /* CMKSND */
+    [SND_SPARK_DIE]      = { 0xD0, 2, { {1, 4, 0x15}, {1, 8, 0x14} } },          /* SPKSND */
+    [SND_SHELL_DIE]      = { 0xD0, 3, { {1, 3, 0x01}, {1, 4, 0x15}, {1, 4, 0x13} } }, /* SHKSND */
+    [SND_PROG_DIE]       = { 0xD0, 2, { {1, 4, 0x14}, {2, 4, 0x17} } },          /* PGKSND */
+    /* the transporter: $13, then $12 every frame 72 times, every 2 frames
+     * 36 times (RRT2.ASM:440-452) */
+    [SND_TRANSPORT]      = { 0xFF, 3, { {1, 1, 0x13}, {72, 1, 0x12}, {36, 2, 0x12} } },
+    [SND_START2]         = { 0xF0, 1, { {1, 16, 0x25} } },                       /* ST2SND */
+};
+
+/* the other seven coin sounds (CNSND picks one of eight at random) */
+static const wms_step COINS[8] = { {1, 32, 0x0C}, {1, 32, 0x20}, {3, 16, 0x24}, {1, 32, 0x27},
+                                   {1, 32, 0x2D}, {2, 16, 0x35}, {1, 32, 0x3A}, {1, 32, 0x3E} };
+static vp_sound *COIN[8];
+
+static int      rom_sounds;        /* 1: the sounds came from the ROM */
+static int      cur_pri, pri_frames;
+static vp_voice cur_voice;
+static unsigned coin_rng = 1;
 
 /* ---- the synthesizer: a few oscillators, a Williams-style noise ---------- */
 
@@ -368,28 +423,152 @@ static vp_sound *make(snd_id id)
     case SND_START:          return mk_start();
     case SND_GRUNT_STEP:     return mk_step();
     case SND_REPROGRAM:      return mk_reprogram();
-    case SND_SMALL_DIE:      return mk_noise_boom(0.12f, 10000, 3000, 1800);
+    case SND_SMALL_DIE:
+    case SND_SPARK_DIE:
+    case SND_SHELL_DIE:      return mk_noise_boom(0.12f, 10000, 3000, 1800);
+    case SND_PROG_DIE:       return mk_noise_boom(0.32f, 6000, 700, 0);
+    case SND_TRANSPORT:      return mk_wave_start();
+    case SND_START2:         return mk_start();
     default:                 return NULL;
     }
+}
+
+/* ---- finding the sound ROM -------------------------------------------------- */
+
+/* The sound ROM's names in MAME's Robotron sets, newest first. */
+static const char *const ROM_NAMES[] = { "video_sound_rom_1.ic12", "robotron.snd", "vsr1.ic12", NULL };
+
+static int rom_ok(const unsigned char *r, size_t n)
+{
+    if (!r || n != 4096) return 0;
+    unsigned reset = r[n - 2] << 8 | r[n - 1];
+    return reset >= 0xF000;
+}
+
+static unsigned char *try_rom(const char *path, size_t *n)
+{
+    unsigned char *r = romzip_load(path, ROM_NAMES, n);
+    if (r && !rom_ok(r, *n)) { free(r); r = NULL; }
+    if (r) printf("vectortron: original sounds from %s\n", path);
+    return r;
+}
+
+/* VT_SOUND_ROM, then next to the game, then AdvanceMAME's ROM folders (its
+ * dir_rom, and the usual places on a cabinet). */
+static unsigned char *find_rom(size_t *n)
+{
+    char path[1024];
+    unsigned char *r;
+    const char *env = getenv("VT_SOUND_ROM");
+    if (env && (r = try_rom(env, n))) return r;
+    static const char *const LOCAL[] = { "assets/robotron.zip", "assets/robotron.snd",
+                                         "assets/video_sound_rom_1.ic12", NULL };
+    for (int i = 0; LOCAL[i]; i++)
+        if ((r = try_rom(vp_asset_path(LOCAL[i], path, sizeof path), n))) return r;
+
+    char dirs[2048] = "";
+    vp_rc *rc = NULL;
+    if (vp_rc_load(NULL, &rc) == VP_OK) {
+        const char *d = vp_rc_get(rc, "dir_rom");
+        if (d) snprintf(dirs, sizeof dirs, "%s", d);
+        vp_rc_free(rc);
+    }
+    const char *home = getenv("HOME");
+    size_t len = strlen(dirs);
+    snprintf(dirs + len, sizeof dirs - len, "%s/usr/local/share/advance/rom:%s/.advance/rom:/home/pi/.advance/rom",
+             len ? ":" : "", home ? home : "/root");
+    for (char *tok = strtok(dirs, ":;"); tok; tok = strtok(NULL, ":;")) {
+        snprintf(path, sizeof path, "%s/robotron.zip", tok);
+        if ((r = try_rom(path, n))) return r;
+    }
+    return NULL;
+}
+
+static vp_sound *record(const unsigned char *rom, size_t n, const wms_step *steps, int count)
+{
+    int frames = 0;
+    vp_sound *out = NULL;
+    float *buf = wms_record(rom, n, steps, count, RATE, 4.0f, &frames);
+    if (!buf) return NULL;
+    vp_sound_from_samples(A, buf, frames, 1, RATE, &out);
+    free(buf);
+    return out;
 }
 
 void snd_init(vp_audio *a)
 {
     A = a;
     if (!a) return;
+    size_t rn = 0;
+    unsigned char *rom = getenv("VT_SYNTH_SOUNDS") ? NULL : find_rom(&rn);
+    rom_sounds = rom != NULL;
     for (int i = 0; i < SND_COUNT; i++) {
         char rel[128], path[1024];
         snprintf(rel, sizeof rel, "assets/sounds/%s.wav", NAMES[i]);
         if (vp_sound_load(a, vp_asset_path(rel, path, sizeof path), &S[i]) == VP_OK) continue;
         snprintf(rel, sizeof rel, "assets/sounds/%s.ogg", NAMES[i]);
         if (vp_sound_load(a, vp_asset_path(rel, path, sizeof path), &S[i]) == VP_OK) continue;
+        if (rom) {
+            if (ORIG[i].n) S[i] = record(rom, rn, ORIG[i].s, ORIG[i].n);
+            continue;
+        }
         S[i] = make((snd_id)i);
     }
+    if (rom) {
+        for (int i = 0; i < 8; i++) COIN[i] = record(rom, rn, &COINS[i], 1);
+        free(rom);
+    } else {
+        printf("vectortron: no Robotron sound ROM found, using sounds made in code\n");
+    }
+}
+
+int snd_original(void) { return rom_sounds; }
+
+const char *snd_name(snd_id id) { return id < SND_COUNT ? NAMES[id] : "?"; }
+
+int snd_original_steps(snd_id id, const wms_step **steps)
+{
+    if (id >= SND_COUNT) return 0;
+    *steps = ORIG[id].s;
+    return ORIG[id].n;
+}
+
+unsigned char *snd_find_rom(size_t *size) { return find_rom(size); }
+
+void snd_tick(void)
+{
+    if (pri_frames > 0 && --pri_frames == 0) cur_pri = 0;
+}
+
+static int seq_frames(const orig *o)
+{
+    int f = 0;
+    for (int i = 0; i < o->n; i++) f += o->s[i].repeat * o->s[i].frames;
+    return f;
 }
 
 void snd_play_ex(snd_id id, float volume, float pitch)
 {
-    if (A && id < SND_COUNT && S[id]) vp_sound_play(A, S[id], volume, pitch, 0);
+    if (!A || id >= SND_COUNT) return;
+    if (!rom_sounds) {
+        if (S[id]) vp_sound_play(A, S[id], volume, pitch, 0);
+        return;
+    }
+    /* the board has one voice: a sound cuts in only on one of the same
+     * priority or lower, while that one's sequence runs (SNDLDV) */
+    const orig *o = &ORIG[id];
+    if (!o->n || o->pri < cur_pri) return;
+    vp_sound *snd = S[id];
+    if (id == SND_COIN) {
+        coin_rng = coin_rng * 1103515245u + 12345u;
+        vp_sound *c = COIN[(coin_rng >> 16) & 7];
+        if (c) snd = c;
+    }
+    if (!snd) return;
+    if (cur_voice) vp_voice_stop(A, cur_voice, 0.004f);
+    cur_voice = vp_sound_play(A, snd, 1.0f, 1.0f, 0);
+    cur_pri = o->pri;
+    pri_frames = seq_frames(o);
 }
 
 void snd_play(snd_id id) { snd_play_ex(id, 1.0f, 1.0f); }

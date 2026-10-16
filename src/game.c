@@ -295,7 +295,7 @@ static void begin_turn(world *w)
         snprintf(buf, sizeof buf, "WAVE %d", w->wave);
         fx_banner(buf, render_laser_color(), 110);
     }
-    snd_play(SND_WAVE_START);
+    snd_play(w->transporter ? SND_TRANSPORT : SND_WAVE_START);
 }
 
 void world_new_game(world *w, int lives, int extra_man, int difficulty, unsigned seed)
@@ -480,10 +480,10 @@ static void destroy(world *w, int i, float dx, float dz)
         pieces = 20; size = 16;
         if (e->state == 1 && e->target >= 0 && is_human(w->e[e->target].type)) human_dies(w, e->target);
         break;
-    case T_PROG:      snd_play(SND_GRUNT_DIE); break;
+    case T_PROG:      snd_play(SND_PROG_DIE); break;
     case T_CRUISE:    snd_play(SND_SMALL_DIE); pieces = 4; size = 4; break;
-    case T_SPARK:     snd_play(SND_SMALL_DIE); pieces = 4; size = 4; break;
-    case T_SHELL:     snd_play(SND_SMALL_DIE); pieces = 4; size = 4; break;
+    case T_SPARK:     snd_play(SND_SPARK_DIE); pieces = 4; size = 4; break;
+    case T_SHELL:     snd_play(SND_SHELL_DIE); pieces = 4; size = 4; break;
     case T_SPHEROID:  snd_play(SND_SPHEROID_DIE); pieces = 22; fx_popup(x, z, 1000); break;
     case T_QUARK:
         /* the original's square bursts into its corners */

@@ -1,9 +1,13 @@
 /* sound.h — the game's sounds.
  *
- * Every sound is made in code at start-up, in the spirit of the Williams
- * sound board (square and saw sweeps, noise, warbles). A file
- * assets/sounds/<name>.wav (or .ogg) next to the executable replaces the
- * made one: see README.md for the names.
+ * The original's sounds, played by an emulated Williams sound board from
+ * the owner's own Robotron ROM set; without it, sounds made in code in the
+ * same spirit. A file assets/sounds/<name>.wav (or .ogg) next to the
+ * executable replaces either: see README.md for the names.
+ *
+ * With the original sounds the board's single voice and its priorities are
+ * kept: a sound only cuts in on one of the same priority or lower, as on the
+ * cabinet.
  */
 #ifndef VT_SOUND_H
 #define VT_SOUND_H
@@ -37,11 +41,31 @@ typedef enum {
     SND_START,
     SND_GRUNT_STEP,     /* the grunts' march */
     SND_REPROGRAM,      /* a brain at work on a human */
-    SND_SMALL_DIE,      /* a missile, spark or shell shot */
+    SND_SMALL_DIE,      /* a cruise missile shot */
+    SND_SPARK_DIE,      /* a spark shot */
+    SND_SHELL_DIE,      /* a shell shot */
+    SND_PROG_DIE,
+    SND_TRANSPORT,      /* a brain wave beams in */
+    SND_START2,         /* a 2 player game starts */
     SND_COUNT
 } snd_id;
 
+/* Loads the sounds: from the original's sound ROM when the owner's MAME set
+ * is found (the Williams sound board emulated, see williams.h), else made
+ * in code; a file assets/sounds/<name>.wav replaces either. */
 void snd_init(vp_audio *a);
+/* 1 when the sounds come from the original ROM. */
+int  snd_original(void);
+/* For tools: the sound's file name, its original command sequence (0 when
+ * the original has none), and the sound ROM as snd_init finds it
+ * (malloc'ed; NULL if none). */
+#include "williams.h"
+const char *snd_name(snd_id id);
+int  snd_original_steps(snd_id id, const wms_step **steps);
+unsigned char *snd_find_rom(size_t *size);
+
+/* Once per 60 Hz step: the original's sound priorities run out. */
+void snd_tick(void);
 void snd_play(snd_id id);
 void snd_play_ex(snd_id id, float volume, float pitch);
 /* A looping sound: returns its voice (0 when silent). */

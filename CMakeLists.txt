@@ -55,6 +55,8 @@ add_executable(vectortron
     src/settings.c
     src/font3d.c
     src/demo.c
+    src/williams.c
+    src/romzip.c
 )
 vp_program(vectortron)
 if(UNIX)
@@ -95,10 +97,29 @@ endif()
 
 # vt-sim: the rules without a screen, played by the demo player (a test).
 add_executable(vt-sim tests/sim.c src/game.c src/waves.c src/demo.c src/render.c src/models.c
-               src/font3d.c src/sound.c)
+               src/font3d.c src/sound.c src/williams.c src/romzip.c)
 vp_program(vt-sim)
 if(UNIX)
     target_link_libraries(vt-sim PRIVATE m)
 endif()
 enable_testing()
 add_test(NAME sim COMMAND vt-sim 10 40)
+
+# wms_test: the sound board emulation against a tiny hand-made ROM.
+add_executable(wms_test tests/wms_test.c src/williams.c)
+if(UNIX)
+    target_link_libraries(wms_test PRIVATE m)
+endif()
+add_test(NAME wms COMMAND wms_test)
+add_executable(cpu_test tests/cpu_test.c src/williams.c)
+if(UNIX)
+    target_link_libraries(cpu_test PRIVATE m)
+endif()
+add_test(NAME cpu COMMAND cpu_test)
+
+# vt-sounds: the original sounds from the sound ROM, as WAV files.
+add_executable(vt-sounds tools/sounds.c src/sound.c src/williams.c src/romzip.c)
+vp_program(vt-sounds)
+if(UNIX)
+    target_link_libraries(vt-sounds PRIVATE m)
+endif()

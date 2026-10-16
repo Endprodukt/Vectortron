@@ -83,14 +83,40 @@ mit 60 Hz wie das Original. `VP_STATS=1` zeigt die Kosten pro Bild.
 
 ## Sounds
 
-Alle Sounds werden im Programm erzeugt (im Stil des Williams-Soundboards).
-Jeder lässt sich durch eine eigene Datei ersetzen:
+**Die Original-Sounds:** Robotron hat ein eigenes Soundboard (Williams, 6808
+mit 8-Bit-DAC), die Sounds stecken in dessen ROM, nicht im Spielcode.
+Vectortron emuliert dieses Board: Beim Start wird das Sound-ROM aus deinem
+eigenen MAME-Set `robotron.zip` geladen, der Original-Soundcode läuft und
+jeder Sound wird mitgeschnitten – so klingt es exakt wie am Automaten. Die
+Befehlsfolgen (z. B. Spielertod = 2× `$11`, dann `$17`) und Prioritäten
+kommen 1:1 aus dem Quellcode des Spiels, und wie auf dem Board gibt es nur
+eine Stimme: Ein Sound unterbricht nur einen mit gleicher oder kleinerer
+Priorität. Brain-Wellen beamen sich mit dem Transporter-Sound herein,
+normale Wellen beginnen still wie im Original.
+
+Das ROM wird gesucht in:
+
+1. `VT_SOUND_ROM` (eine `robotron.zip` oder die ROM-Datei selbst)
+2. `assets/robotron.zip`, `assets/robotron.snd`, `assets/video_sound_rom_1.ic12` neben dem Programm
+3. den ROM-Ordnern von AdvanceMAME (`dir_rom` in der advmame.rc,
+   `/usr/local/share/advance/rom`, `~/.advance/rom`)
+
+Im ZIP heißt es `video_sound_rom_1.ic12` (ältere Sets: `robotron.snd`).
+Das ROM ist nicht Teil dieses Projekts. Findet sich keins, nimmt das Spiel
+seine eigenen, nachempfundenen Sounds (die erzwingt auch
+`VT_SYNTH_SOUNDS=1`).
+
+`vt-sounds [robotron.zip] [ordner]` schreibt alle Original-Sounds als WAV,
+zum Anhören oder Nachbearbeiten.
+
+**Eigene Sounds:** jeder Sound lässt sich durch eine Datei ersetzen:
 `assets/sounds/<name>.wav` (oder `.ogg`) neben dem Programm, mit `<name>` aus
 
 `shot grunt_die electrode_die hulk_hit rescue human_die prog_make brain_die
 cruise spheroid_die enforcer_birth enforcer_shot enforcer_die quark_die
 tank_birth tank_shot shell_bounce tank_die player_die wave_start wave_end
-extra_man coin start grunt_step reprogram small_die`
+extra_man coin start grunt_step reprogram small_die spark_die shell_die
+prog_die transport start2`
 
 (Der Ordner `assets/` wird beim Bauen mitkopiert und ist in `.gitignore`.)
 
@@ -117,6 +143,9 @@ kopieren und im Menü unter Settings → GAMES → INSTALL GAMES installieren.
 * `vt-gallery --windowed` – alle 3D-Modelle drehend auf einem Bildschirm.
 * `vt-sim [spiele] [wellen]` – die Regeln ohne Bildschirm, gespielt vom
   Demo-Spieler; prüft, dass nichts aus dem Ruder läuft (`ctest`).
+* `vt-sounds` – die Original-Sounds als WAV (siehe oben).
+* `ctest` prüft außerdem die 6800-Emulation (`cpu_test`, `wms_test`:
+  Befehle, Flags, Interrupt über die PIA, Takt-genaue Tonhöhe).
 * `VT_WAVE=n` startet sofort Welle n, `VT_AUTOPLAY=1` lässt den Demo-Spieler
   spielen (zum Testen).
 
