@@ -85,3 +85,10 @@ add_custom_target(vpk
     DEPENDS vectortron
     COMMENT "Packing vectortron-${PROJECT_VERSION}.vpk"
     VERBATIM)
+
+# vt-gallery: every model on one screen, turning (for looking at them).
+add_executable(vt-gallery tools/gallery.c src/models.c)
+vp_program(vt-gallery)
+if(UNIX)
+    target_link_libraries(vt-gallery PRIVATE m)
+endif()
