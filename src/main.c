@@ -339,35 +339,40 @@ static void draw_roster(vp_dvg *d, double t)
     for (int i = 0; i < shown; i++) {
         int col = i / 6, row = i % 6;
         float cx = col ? 2250.0f : 250.0f, cy = 3250.0f - row * 520;
-        vp3d_view v;
-        vp3d_view_init(&v, 40);
+        /* each card its own camera, far enough that the model stands about
+         * 420 board units tall, the model moved across the camera's plane
+         * so that it lands at (cx, cy) */
+        float h = model_height(R[i].m);
+        if (h < 9) h = 9;
+        vp3d_view vv;
+        vp3d_view_init(&vv, 30);
         float a = (float)t * 1.2f + i;
-        vp3d_look_at(&v, vp_v3(sinf(a) * 40, 22, cosf(a) * -40), vp_v3(0, 7, 0), vp_v3(0, 1, 0));
+        float far = h * (W / 420.0f) / 2 / (tanf(15 * 3.14159265f / 180) / vv.aspect);
+        vp_vec3 tgt = vp_v3(0, h / 2, 0);
+        vp_vec3 eye = vp_v3_add(tgt, vp_v3_scale(vp_v3_normalize(vp_v3(sinf(a), 0.45f, -cosf(a))), far));
+        vp3d_look_at(&vv, eye, tgt, vp_v3(0, 1, 0));
         model_pose p;
         memset(&p, 0, sizeof p);
         p.sxz = p.sy = 1;
+        p.dim = 1;
         p.walk = (float)t * 8;
         p.spin = (float)t * 3;
         p.color = model_color(R[i].m);
-        p.y = (R[i].m == MDL_SPHEROID || R[i].m == MDL_QUARK || R[i].m == MDL_ENFORCER) ? 7 : 0;
-        /* each card has its own camera; the camera's view of the origin lands at the board's middle; move
-         * the model so it lands at (cx, cy) instead */
-        float off_x = (cx + 400 - W / 2.0f) / (W / 2.0f);
-        float off_y = (cy + 120 - W / 2.0f) / (W / 2.0f);
-        vp3d_view vv = v;
-        vp_vec3 eye = vp3d_eye(&vv);
-        vp_vec3 fwd = vp_v3_normalize(vp_v3_sub(vp_v3(0, 7, 0), eye));
+        float lift = (R[i].m == MDL_SPHEROID || R[i].m == MDL_QUARK || R[i].m == MDL_ENFORCER) ? 6 : 0;
+        vp_vec3 fwd = vp_v3_normalize(vp_v3_sub(tgt, eye));
         vp_vec3 right = vp_v3_normalize(vp_v3_cross(vp_v3(0, 1, 0), fwd));
         vp_vec3 up = vp_v3_cross(fwd, right);
-        float dist = vp_v3_length(vp_v3_sub(vp_v3(0, 7, 0), eye));
-        float half_w = dist * tanf(20 * 3.14159265f / 180);
-        float half_h = half_w / vv.aspect;
+        float half_w = far * tanf(15 * 3.14159265f / 180), half_h = half_w / vv.aspect;
+        float off_x = (cx + 300 - W / 2.0f) / (W / 2.0f), off_y = (cy + 100 - W / 2.0f) / (W / 2.0f);
         vp_vec3 move = vp_v3_add(vp_v3_scale(right, off_x * half_w), vp_v3_scale(up, off_y * half_h));
-        p.x = move.x; p.y += move.y; p.z = move.z;
-        p.heading = 0;
-        model_draw(d, &vv, NULL, R[i].m, &p);
-        text(d, p.color, R[i].name, cx + 820, cy + 160, 100, VP_TEXT_LEFT);
-        text(d, mkrgb(255, 255, 255), R[i].pts, cx + 820, cy - 20, 80, VP_TEXT_LEFT);
+        p.x = move.x;
+        p.y = move.y + lift;
+        p.z = move.z;
+        vp3d_scene_begin(render_scene(), d, &vv);
+        model_draw(d, &vv, render_scene(), R[i].m, &p);
+        vp3d_scene_end(render_scene());
+        text(d, p.color, R[i].name, cx + 620, cy + 160, 100, VP_TEXT_LEFT);
+        text(d, mkrgb(255, 255, 255), R[i].pts, cx + 620, cy - 20, 80, VP_TEXT_LEFT);
     }
     draw_credits_line(d, t);
 }
