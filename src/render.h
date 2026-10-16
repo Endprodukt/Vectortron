@@ -20,6 +20,8 @@ void fx_sparks(float x, float y, float z, rgb color, int count, float speed);
 void fx_ring(float x, float z, rgb color, float speed, float frames);   /* a shock wave */
 void fx_shake(float amount);                                            /* the camera jolts */
 void fx_banner(const char *s, rgb color, float frames);                 /* big zooming text */
+/* Big centered text with echoes in cycling colors behind it (as the banners). */
+void render_big_text(vp_dvg *d, const char *s, rgb color, float x, float y, float h, float fade, double t);
 void fx_muzzle(float x, float z, float dx, float dz);
 void fx_shot_trail(float x, float z, float dx, float dz);
 void fx_wall_hit(float x, float z, float dx, float dz);

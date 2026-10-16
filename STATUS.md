@@ -96,6 +96,10 @@ Vectortron, geholt von https://github.com/endprodukt/vectortron (Branch
     `backup/marquee-old-2026-10-16.png`. Auf dem Automaten im Spielordner und
     als `artwork/marquees/vectortron.png` fürs Menü.
 
+- GAME OVER wie die Banner: Hauptschrift rot, dahinter Echos in wechselnden
+  Farben (`render_big_text`, von den Bannern abgetrennt; Echos je nach
+  EFFECTS 2/1/0). Auf dem Automaten.
+
 ## Behobene Fehler
 
 - MAME 0.289 nennt die Sound-ROM `video_sound_rom_3_std_767.ic12`; das Spiel

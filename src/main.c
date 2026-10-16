@@ -476,7 +476,7 @@ static void draw_play(vp_dvg *d, double t)
         text(d, mkrgb(255, 255, 255), buf, W / 2.0f, 1550, 110, VP_TEXT_CENTER);
     }
     if (w->ph == PH_OVER) {
-        text(d, mkrgb(255, 60, 60), "GAME OVER", W / 2.0f, 2150, 280, VP_TEXT_CENTER);
+        render_big_text(d, "GAME OVER", mkrgb(255, 60, 60), W / 2.0f, 2150, 280, 1, t);
         if (G.players > 1) {
             char buf[24];
             snprintf(buf, sizeof buf, "PLAYER %d", G.cur + 1);

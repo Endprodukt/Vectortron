@@ -910,14 +910,21 @@ void render_world(vp_dvg *d, const world *w, double t)
         float u = 1 - banner_time / banner_max;
         float grow = u < 0.25f ? u / 0.25f : 1 + (u - 0.25f) * 0.25f;
         float fade = u > 0.8f ? (1 - u) / 0.2f : 1;
-        /* the echoes cost big lines right when the arena is fullest (a wave
-         * starting): two at FULL, one at LIGHT, none at OFF */
-        for (int k = lvl(2); k >= 0; k--) {
-            float h = 260 * grow * (1 - k * 0.12f);
-            rgb c = k ? rgb_scale(hsv((float)t * 2 + k * 0.15f, 0.9f, 1), 0.5f * fade)
-                      : rgb_scale(banner_color, fade);
-            text(d, c, banner, W / 2.0f, 2350 - h / 2 + k * 40, h, VP_TEXT_CENTER);
-        }
+        float h = 260 * grow;
+        render_big_text(d, banner, banner_color, W / 2.0f, 2350 - h / 2, h, fade, t);
+    }
+}
+
+/* Big text with a trail of echoes behind it in cycling colors, Tempest 2000
+ * style: the banners, GAME OVER. `y` is the baseline, `h` the letter height;
+ * the echoes cost big lines right when the arena is fullest (a wave
+ * starting): two at FULL, one at LIGHT, none at OFF. */
+void render_big_text(vp_dvg *d, const char *s, rgb color, float x, float y, float h, float fade, double t)
+{
+    for (int k = lvl(2); k >= 0; k--) {
+        float hk = h * (1 - k * 0.12f);
+        rgb c = k ? rgb_scale(hsv((float)t * 2 + k * 0.15f, 0.9f, 1), 0.5f * fade) : rgb_scale(color, fade);
+        text(d, c, s, x, y + (h - hk) / 2 + k * 40, hk, VP_TEXT_CENTER);
     }
 }
 
