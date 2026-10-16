@@ -21,6 +21,17 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
 endif()
 
+if(VT_PI_BUILD)
+    # cmake/toolchain-pi-clang.cmake: the cabinet's own SDL2, by its file.
+    add_library(SDL2::SDL2 SHARED IMPORTED GLOBAL)
+    set_target_properties(SDL2::SDL2 PROPERTIES
+        IMPORTED_LOCATION "${CMAKE_SYSROOT}/usr/lib/aarch64-linux-gnu/libSDL2-2.0.so.0"
+        IMPORTED_SONAME "libSDL2-2.0.so.0"
+        INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_SYSROOT}/usr/include/SDL2"
+        INTERFACE_COMPILE_DEFINITIONS "_REENTRANT")
+    set(THREADS_PREFER_PTHREAD_FLAG ON)
+endif()
+
 set(VECTORPIE_SDK_DIR "" CACHE PATH "VectorPie SDK source tree (VectorPie/sdk); empty = installed or fetched")
 set(VECTORPIE_GIT_TAG "main" CACHE STRING "VectorPie revision fetched when no SDK is found")
 
@@ -79,9 +90,19 @@ endif()
 
 # --- the package: cmake --build --preset pi --target vpk -----------------------
 
-# VECTORPIE_PACK (vp-pack) is set by the SDK however it was found.
+# VECTORPIE_PACK (vp-pack) is set by the SDK however it was found (older SDK
+# trees do not set it: then it is taken from the tree's tools/).
+if(NOT VECTORPIE_PACK AND VECTORPIE_SDK_DIR)
+    set(VECTORPIE_PACK ${VECTORPIE_SDK_DIR}/tools/vp-pack/vp-pack.sh)
+endif()
 configure_file(pkg/game.ini.in ${CMAKE_CURRENT_BINARY_DIR}/game.ini @ONLY)
 set(VT_STAGE ${CMAKE_CURRENT_BINARY_DIR}/stage/vectortron)
+# assets/ (your own sound ROM and sounds, see README.md) goes into the package too
+set(VT_STAGE_ASSETS "")
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/assets)
+    set(VT_STAGE_ASSETS COMMAND ${CMAKE_COMMAND} -E copy_directory
+                        ${CMAKE_CURRENT_SOURCE_DIR}/assets ${VT_STAGE}/assets)
+endif()
 add_custom_target(vpk
     COMMAND ${CMAKE_COMMAND} -E rm -rf ${VT_STAGE}
     COMMAND ${CMAKE_COMMAND} -E make_directory ${VT_STAGE}
@@ -89,6 +110,7 @@ add_custom_target(vpk
     COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/game.ini ${VT_STAGE}/
     COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/pkg/leds.cfg ${VT_STAGE}/
     COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/pkg/marquee.png ${VT_STAGE}/
+    ${VT_STAGE_ASSETS}
     COMMAND sh ${VECTORPIE_PACK} ${VT_STAGE} ${CMAKE_CURRENT_BINARY_DIR}
     DEPENDS vectortron
     COMMENT "Packing vectortron-${PROJECT_VERSION}.vpk"

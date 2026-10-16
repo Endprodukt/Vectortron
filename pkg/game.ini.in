@@ -5,6 +5,6 @@ executable   = vectortron
 version      = @PROJECT_VERSION@
 sdk          = 0.1
 author       = Vectortron contributors
-description  = A 3D vector tribute to Robotron 2084: save the last human family
+description  = A 3D vector tribute to Robotron 2084 - save the last human family
 marquee      = marquee.png
 hiscores     = yes

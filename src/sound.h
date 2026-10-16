@@ -47,6 +47,8 @@ typedef enum {
     SND_PROG_DIE,
     SND_TRANSPORT,      /* a brain wave beams in */
     SND_START2,         /* a 2 player game starts */
+    SND_HISCORE,        /* a high score: the tune (HSTUNE) */
+    SND_HISCORE_TOP,    /* the best score of all: the air raid (ULTUNE) */
     SND_COUNT
 } snd_id;
 
@@ -63,6 +65,9 @@ int  snd_original(void);
 const char *snd_name(snd_id id);
 int  snd_original_steps(snd_id id, const wms_step **steps);
 unsigned char *snd_find_rom(size_t *size);
+/* The original sound recorded from the ROM, as the board plays it (full
+ * level; malloc'ed, NULL when the original has none). */
+float *snd_record_original(const unsigned char *rom, size_t n, snd_id id, int rate, int *frames);
 
 /* Once per 60 Hz step: the original's sound priorities run out. */
 void snd_tick(void);

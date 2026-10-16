@@ -21,6 +21,7 @@ typedef struct {
     int camera;         /* 0 Robotron X, 1 arena, 2 classic overhead */
     int floor;          /* -1 auto, 0 tiles, 1 grid, 2 none */
     int effects;        /* 0 off, 1 light, 2 full */
+    int refresh;        /* pictures a second on the board, 30..60 (at the next start) */
     /* sound */
     int volume;         /* 0..10 */
 } settings;

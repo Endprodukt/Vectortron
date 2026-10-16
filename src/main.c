@@ -106,6 +106,8 @@ static void begin_initials_or_attract(void)
             G.state = S_INITIALS;
             G.time = 0;
             vp_initials_begin(&G.entry, 1, 30.0f);
+            /* GETHIM: the air raid for the top score, else the tune */
+            snd_play(vp_hiscore_rank(G.pw[p].score) == 0 ? SND_HISCORE_TOP : SND_HISCORE);
             return;
         }
     }
@@ -521,6 +523,10 @@ int main(int argc, char **argv)
     desc.shutdown = shutdown;
     desc.update_hz = 60;
     desc.frame_hz = 40;
-    desc.frame_hz_board = 30;       /* a full arena needs the time on the board */
+    /* a full arena needs the time on the board; the owner picks the rate
+     * there (DISPLAY, REFRESH): more pictures a second flicker less but
+     * leave the beam less time for each */
+    settings_load();
+    desc.frame_hz_board = SET.refresh;
     return vp_run(&desc, argc, argv);
 }

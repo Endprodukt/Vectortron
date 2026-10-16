@@ -128,7 +128,8 @@ The ROM is looked for in:
 2. `assets/robotron.zip`, `assets/robotron.snd`, `assets/video_sound_rom_1.ic12` next to the executable
 3. AdvanceMAME's ROM folders (`dir_rom` in advmame.rc, `/usr/local/share/advance/rom`, `~/.advance/rom`)
 
-In the zip it is `video_sound_rom_1.ic12` (older sets: `robotron.snd`). The
+In the zip it is `video_sound_rom_3_std_767.ic12` (MAME 0.289; before:
+`video_sound_rom_1.ic12`, older sets: `robotron.snd`). The
 ROM is not part of this project. `VT_SYNTH_SOUNDS=1` forces the sounds made
 in code.
 
@@ -142,7 +143,7 @@ files, to listen to or to edit.
 cruise spheroid_die enforcer_birth enforcer_shot enforcer_die quark_die
 tank_birth tank_shot shell_bounce tank_die player_die wave_start wave_end
 extra_man coin start grunt_step reprogram small_die spark_die shell_die
-prog_die transport start2`
+prog_die transport start2 hiscore hiscore_top`
 
 (The `assets/` folder is copied next to the executable when building, and
 is ignored by git.)

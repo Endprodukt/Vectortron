@@ -20,13 +20,13 @@ static const char *const NAMES[SND_COUNT] = {
     "enforcer_shot", "enforcer_die", "quark_die", "tank_birth", "tank_shot",
     "shell_bounce", "tank_die", "player_die", "wave_start", "wave_end",
     "extra_man", "coin", "start", "grunt_step", "reprogram", "small_die",
-    "spark_die", "shell_die", "prog_die", "transport", "start2",
+    "spark_die", "shell_die", "prog_die", "transport", "start2", "hiscore", "hiscore_top",
 };
 
 /* ---- the original sounds: the sound tables of the game's source ----------
  * {priority, steps of (repeat, frames, sound number)}; RRG23, RRS22, RRP8,
  * RRH11, RRB10, RRC11, RRTK4 and RRT2.ASM. A priority of 0: no sound. */
-typedef struct { int pri, n; wms_step s[3]; } orig;
+typedef struct { int pri, n; wms_step s[7]; } orig;
 
 static const orig ORIG[SND_COUNT] = {
     [SND_SHOT]           = { 0xD0, 1, { {1, 8, 0x01} } },                        /* LASSND */
@@ -63,6 +63,11 @@ static const orig ORIG[SND_COUNT] = {
      * 36 times (RRT2.ASM:440-452) */
     [SND_TRANSPORT]      = { 0xFF, 3, { {1, 1, 0x13}, {72, 1, 0x12}, {36, 2, 0x12} } },
     [SND_START2]         = { 0xF0, 1, { {1, 16, 0x25} } },                       /* ST2SND */
+    /* the high score tunes, sent with SNDLDS (RRTESTC.ASM:161-170, 400-405):
+     * HSTUNE for a place in the table, ULTUNE for the top one */
+    [SND_HISCORE]        = { 0xC0, 2, { {1, 1, 0x1B}, {1, 1, 0x02} } },         /* HSTUNE */
+    [SND_HISCORE_TOP]    = { 0xC0, 7, { {1, 0xFF, 0x3C}, {1, 0xFF, 0x00}, {1, 0x20, 0x00}, {1, 0xC0, 0x36},
+                                        {1, 0x60, 0x3D}, {2, 0x0A, 0x11}, {2, 0x40, 0x3E} } }, /* ULTUNE */
 };
 
 /* the other seven coin sounds (CNSND picks one of eight at random) */
@@ -429,6 +434,8 @@ static vp_sound *make(snd_id id)
     case SND_PROG_DIE:       return mk_noise_boom(0.32f, 6000, 700, 0);
     case SND_TRANSPORT:      return mk_wave_start();
     case SND_START2:         return mk_start();
+    case SND_HISCORE:
+    case SND_HISCORE_TOP:    return mk_extra_man();
     default:                 return NULL;
     }
 }
@@ -436,7 +443,7 @@ static vp_sound *make(snd_id id)
 /* ---- finding the sound ROM -------------------------------------------------- */
 
 /* The sound ROM's names in MAME's Robotron sets, newest first. */
-static const char *const ROM_NAMES[] = { "video_sound_rom_1.ic12", "robotron.snd", "vsr1.ic12", NULL };
+static const char *const ROM_NAMES[] = { "video_sound_rom_3_std_767.ic12", "video_sound_rom_1.ic12", "robotron.snd", "vsr1.ic12", NULL };
 
 static int rom_ok(const unsigned char *r, size_t n)
 {
@@ -484,12 +491,31 @@ static unsigned char *find_rom(size_t *n)
     return NULL;
 }
 
-static vp_sound *record(const unsigned char *rom, size_t n, const wms_step *steps, int count)
+/* The board's DAC swings its full range: played as recorded it is far
+ * louder than anything else on the cabinet. */
+#define ROM_GAIN 0.3f
+
+static int seq_frames(const orig *o);
+
+/* Frames the board is left to play after a sequence: the high score tune's
+ * rests (up to 0.8 s) are longer than the stillness that ends a recording;
+ * it runs some 10 s. */
+static int tail_frames(snd_id id) { return id == SND_HISCORE ? 620 : 0; }
+
+float *snd_record_original(const unsigned char *rom, size_t n, snd_id id, int rate, int *frames)
 {
-    int frames = 0;
+    if (id >= SND_COUNT || !ORIG[id].n) return NULL;
+    orig o = ORIG[id];
+    o.s[o.n - 1].frames += tail_frames(id);
+    float seconds = seq_frames(&o) / 60.0f + 2.0f;
+    return wms_record(rom, n, o.s, o.n, rate, seconds > 4.0f ? seconds : 4.0f, frames);
+}
+
+static vp_sound *to_sound(float *buf, int frames)
+{
     vp_sound *out = NULL;
-    float *buf = wms_record(rom, n, steps, count, RATE, 4.0f, &frames);
     if (!buf) return NULL;
+    for (int i = 0; i < frames; i++) buf[i] *= ROM_GAIN;
     vp_sound_from_samples(A, buf, frames, 1, RATE, &out);
     free(buf);
     return out;
@@ -509,13 +535,17 @@ void snd_init(vp_audio *a)
         snprintf(rel, sizeof rel, "assets/sounds/%s.ogg", NAMES[i]);
         if (vp_sound_load(a, vp_asset_path(rel, path, sizeof path), &S[i]) == VP_OK) continue;
         if (rom) {
-            if (ORIG[i].n) S[i] = record(rom, rn, ORIG[i].s, ORIG[i].n);
+            int frames = 0;
+            S[i] = to_sound(snd_record_original(rom, rn, (snd_id)i, RATE, &frames), frames);
             continue;
         }
         S[i] = make((snd_id)i);
     }
     if (rom) {
-        for (int i = 0; i < 8; i++) COIN[i] = record(rom, rn, &COINS[i], 1);
+        for (int i = 0; i < 8; i++) {
+            int frames = 0;
+            COIN[i] = to_sound(wms_record(rom, rn, &COINS[i], 1, RATE, 4.0f, &frames), frames);
+        }
         free(rom);
     } else {
         printf("vectortron: no Robotron sound ROM found, using sounds made in code\n");
@@ -557,6 +587,8 @@ void snd_play_ex(snd_id id, float volume, float pitch)
     /* the board has one voice: a sound cuts in only on one of the same
      * priority or lower, while that one's sequence runs (SNDLDV) */
     const orig *o = &ORIG[id];
+    /* the high score tunes go out with SNDLDS, which clears the priority */
+    if (id == SND_HISCORE || id == SND_HISCORE_TOP) cur_pri = 0;
     if (!o->n || o->pri < cur_pri) return;
     vp_sound *snd = S[id];
     if (id == SND_COIN) {

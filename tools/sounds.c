@@ -35,7 +35,7 @@ static int write_wav(const char *path, const float *buf, int n, int rate)
 
 int main(int argc, char **argv)
 {
-    static const char *const NAMES[] = { "video_sound_rom_1.ic12", "robotron.snd", "vsr1.ic12", NULL };
+    static const char *const NAMES[] = { "video_sound_rom_3_std_767.ic12", "video_sound_rom_1.ic12", "robotron.snd", "vsr1.ic12", NULL };
     size_t n = 0;
     unsigned char *rom = argc > 1 ? romzip_load(argv[1], NAMES, &n) : snd_find_rom(&n);
     const char *dir = argc > 2 ? argv[2] : "sounds";
@@ -44,15 +44,21 @@ int main(int argc, char **argv)
         return 1;
     }
     char cmd[1100];
+#ifdef _WIN32
+    /* cmd.exe has no mkdir -p and makes the parents by itself */
+    snprintf(cmd, sizeof cmd, "%s", dir);
+    for (char *p = cmd; *p; p++) if (*p == '/') *p = '\\';
+    char mk[2300];
+    snprintf(mk, sizeof mk, "if not exist \"%s\" mkdir \"%s\"", cmd, cmd);
+    if (system(mk) != 0) { fprintf(stderr, "vt-sounds: cannot make %s\n", dir); return 1; }
+#else
     snprintf(cmd, sizeof cmd, "mkdir -p '%s'", dir);
     if (system(cmd) != 0) { fprintf(stderr, "vt-sounds: cannot make %s\n", dir); return 1; }
+#endif
     int written = 0;
     for (int i = 0; i < SND_COUNT; i++) {
-        const wms_step *steps;
-        int count = snd_original_steps((snd_id)i, &steps);
-        if (!count) continue;
         int frames = 0;
-        float *buf = wms_record(rom, n, steps, count, 44100, 4.0f, &frames);
+        float *buf = snd_record_original(rom, n, (snd_id)i, 44100, &frames);
         if (!buf) continue;
         char path[1200];
         snprintf(path, sizeof path, "%s/%s.wav", dir, snd_name((snd_id)i));

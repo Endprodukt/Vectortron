@@ -589,7 +589,6 @@ static void shots_step(world *w)
     for (int s = 0; s < MAX_SHOTS; s++) {
         shot *sh = &w->shots[s];
         if (!sh->live) continue;
-        fx_shot_trail(sh->x, sh->z, sh->dx, sh->dz);
         /* 6 pixels / 6 lines a frame, checked in two halves */
         for (int half = 0; half < 2 && sh->live; half++) {
             sh->x += sh->dx * 3;

@@ -59,7 +59,7 @@ rgb render_laser_color(void) { return ST()->laser; }
 
 /* ---- effects ------------------------------------------------------------- */
 
-#define MAX_FRAGS  700
+#define MAX_FRAGS  300      /* the beam's budget: new ones replace old ones */
 #define MAX_RINGS  24
 #define MAX_POPUPS 24
 #define MAX_SKULLS 16
@@ -153,7 +153,7 @@ void fx_sparks(float x, float y, float z, rgb color, int count, float speed)
         f->p = vp_v3(x, y, z);
         f->v = vp_v3(cosf(a) * s, up * s, sinf(a) * s);
         f->kind = FR_SPARK;
-        f->max = f->life = 12 + frand() * 18;
+        f->max = f->life = 10 + frand() * 12;
         f->c = color;
     }
 }
@@ -211,7 +211,8 @@ void fx_banner(const char *s, rgb color, float frames)
  * dirz), a spray of sparks, a shock wave on the floor and a jolt. */
 void fx_explode(float x, float y, float z, rgb color, float dirx, float dirz, int pieces, float size)
 {
-    for (int i = 0; i < pieces; i++) {
+    int debris = (pieces + 1) / 2;
+    for (int i = 0; i < debris; i++) {
         frag *f = new_frag();
         float along = (frand() * 2 - 1) * 2.2f;
         float side = (frand() * 2 - 1) * 0.7f;
@@ -233,15 +234,15 @@ void fx_explode(float x, float y, float z, rgb color, float dirx, float dirz, in
         f->c = color;
         f->kind = FR_DEBRIS;
     }
-    fx_sparks(x, y + size * 0.5f, z, color, pieces + pieces / 2, 2.2f + size * 0.08f);
-    fx_sparks(x, y + size * 0.5f, z, mkrgb(255, 255, 255), pieces / 3 + 1, 3.0f);
-    fx_ring(x, z, color, 0.9f + size * 0.04f, 22);
+    fx_sparks(x, y + size * 0.5f, z, color, pieces / 2 + 1, 2.2f + size * 0.08f);
+    fx_sparks(x, y + size * 0.5f, z, mkrgb(255, 255, 255), pieces / 6 + 1, 3.0f);
+    if (size >= 14) fx_ring(x, z, color, 0.9f + size * 0.04f, 22);
     fx_shake(size > 14 ? 2.5f : 1.0f);
 }
 
 void fx_muzzle(float x, float z, float dx, float dz)
 {
-    sparks_dir(x + dx * 5, 7, z + dz * 5, ST()->laser, 3, 2.2f, dx, dz, 1.2f);
+    sparks_dir(x + dx * 5, 7, z + dz * 5, ST()->laser, 2, 2.2f, dx, dz, 1.2f);
 }
 
 void fx_shot_trail(float x, float z, float dx, float dz)
@@ -259,7 +260,7 @@ void fx_shot_trail(float x, float z, float dx, float dz)
  * wave's laser color (the original's laser-wall flash). */
 void fx_wall_hit(float x, float z, float dx, float dz)
 {
-    sparks_dir(x, 7, z, ST()->laser, 8, 2.0f, -dx, -dz, 2.4f);
+    sparks_dir(x, 7, z, ST()->laser, 4, 2.0f, -dx, -dz, 2.4f);
     fx_flash(ST()->laser, 4);
 }
 
@@ -545,6 +546,8 @@ static void color(vp_dvg *d, rgb c) { vp_color(d, c.r, c.g, c.b); }
 #define TILES_X 10
 #define TILES_Z 8
 #define WALL_H  7.0f
+#define GRID_X  5           /* the grid floor: coarser than the tiles, for the beam */
+#define GRID_Z  4
 
 static void arena_into_scene(vp_dvg *d, double t)
 {
@@ -558,13 +561,14 @@ static void arena_into_scene(vp_dvg *d, double t)
     if (flash_time > 0) fl = mkrgb(fl.r + (255 - fl.r) / 3, fl.g + (255 - fl.g) / 3, fl.b + (255 - fl.b) / 3);
     color(d, fl);
     if (FLOOR == 1) {
-        for (int i = 1; i < TILES_X; i++) {
-            float x = x0 + i * tw;
+        const float gw = (x1 - x0) / GRID_X, gd = (z1 - z0) / GRID_Z;
+        for (int i = 1; i < GRID_X; i++) {
+            float x = x0 + i * gw;
             if (i & 1) vp3d_scene_line(SCENE, vp_v3(x, 0, z0), vp_v3(x, 0, z1));
             else       vp3d_scene_line(SCENE, vp_v3(x, 0, z1), vp_v3(x, 0, z0));
         }
-        for (int j = 1; j < TILES_Z; j++) {
-            float z = z0 + j * td;
+        for (int j = 1; j < GRID_Z; j++) {
+            float z = z0 + j * gd;
             if (j & 1) vp3d_scene_line(SCENE, vp_v3(x1, 0, z), vp_v3(x0, 0, z));
             else       vp3d_scene_line(SCENE, vp_v3(x0, 0, z), vp_v3(x1, 0, z));
         }
@@ -594,40 +598,18 @@ static void arena_into_scene(vp_dvg *d, double t)
     }
 }
 
-/* The score, the men left and the wave, standing on the far wall. The row
- * keeps to the part of the wall the camera is looking at. With two players
- * both scores stand there, 1UP and 2UP, the one playing blinking. */
+/* The score, the men left and the wave, standing on the far wall: fixed to
+ * it, the score at its left end, the wave and the men (a number) at its
+ * right. With two players both scores stand there, 1UP and 2UP, the one
+ * playing blinking. */
 void render_wall_hud(vp_dvg *d, const world *w1, const world *w2, int players, int current, double t)
 {
     char buf[32];
     const world *w = current ? w2 : w1;
     const float zb = ARENA_Z1 + 8, base = 10;
-    float h = 14, row = 250;                    /* letter height, the whole row's width */
+    const float h = 14;                         /* letter height */
+    const float x0 = ARENA_X0, row = ARENA_X1 - ARENA_X0;
     vp_vec3 right = vp_v3(1, 0, 0), up = vp_v3(0, 1, 0);
-    /* the part of the far wall on the screen, and its middle */
-    float vis0 = 1e9f, vis1 = -1e9f, mid = CAM.target.x, best = 1e9f;
-    for (float x = ARENA_X0 - 200; x <= ARENA_X1 + 200; x += 2) {
-        float sx, sy;
-        if (!vp3d_project(&VIEW, vp_v3(x, base, zb), &sx, &sy)) continue;
-        if (sx >= 140 && sx <= W - 140) {
-            if (x < vis0) vis0 = x;
-            if (x > vis1) vis1 = x;
-        }
-        if (fabsf(sx - W / 2.0f) < best) { best = fabsf(sx - W / 2.0f); mid = x; }
-    }
-    if (vis1 > vis0 && row > (vis1 - vis0) * 0.92f) {
-        /* the camera close: the row smaller, so it fits */
-        float k = (vis1 - vis0) * 0.92f / row;
-        row *= k;
-        h *= k;
-    }
-    float x0 = mid - row / 2;
-    if (x0 < ARENA_X0 - 30) x0 = ARENA_X0 - 30;
-    if (x0 > ARENA_X1 + 30 - row) x0 = ARENA_X1 + 30 - row;
-    if (vis1 > vis0) {
-        if (x0 < vis0) x0 = vis0;
-        if (x0 + row > vis1) x0 = vis1 - row;
-    }
 
     if (players < 2) {
         vp_color(d, 255, 40, 60);
@@ -652,22 +634,12 @@ void render_wall_hud(vp_dvg *d, const world *w1, const world *w2, int players, i
         }
     }
 
-    /* the men left: little figures standing on the wall */
-    model_pose p;
-    memset(&p, 0, sizeof p);
-    p.sxz = p.sy = 1;
-    p.dim = 1;
-    p.color = model_color(MDL_PLAYER);
+    /* the men left, as a number */
     int men = w->lives - 1;
-    if (men > 7) men = 7;           /* the original shows 7 at most */
-    for (int i = 0; i < men; i++) {
-        p.x = x0 + row - 6 - i * 11.0f * h / 14;
-        p.sxz = p.sy = h / 14;
-        p.z = zb;
-        p.y = base + (players > 1 ? h * 2.4f : 0);
-        p.heading = PI + 0.4f * sinf((float)t * 2 + i);
-        model_draw(d, &VIEW, NULL, MDL_PLAYER, &p);
-    }
+    if (men < 0) men = 0;
+    color(d, model_color(MDL_PLAYER));
+    snprintf(buf, sizeof buf, "MEN %d", men);
+    font3d_text(d, &VIEW, buf, vp_v3(x0 + row, base, zb), right, up, h * 0.8f, FONT3D_RIGHT);
     vp_color(d, 80, 220, 120);
     snprintf(buf, sizeof buf, "WAVE %d", w->wave);
     font3d_text(d, &VIEW, buf, vp_v3(x0 + row, base + h * (players > 1 ? 1.7f : 1.4f), zb), right, up, h * 0.57f, FONT3D_RIGHT);
@@ -874,35 +846,16 @@ void render_world(vp_dvg *d, const world *w, double t)
         model_draw(d, &VIEW, SCENE, MDL_PLAYER, &pose);
     }
 
-    /* the player's shots: plasma bolts. A white-hot core drawn twice (the
-     * beam's own way of being brighter), two strands in the wave's laser
-     * color either side, and a spinning star at the head. */
+    /* the player's shots: one line each in the wave's laser color, as the
+     * original's laser (the beam's time goes to the robots) */
+    color(d, ST()->laser);
     for (int i = 0; i < MAX_SHOTS; i++) {
         const shot *s = &w->shots[i];
         if (!s->live) continue;
         float l = sqrtf(s->dx * s->dx + s->dz * s->dz);
-        float ux = s->dx / l, uz = s->dz / l, nx = -uz, nz = ux;
+        float ux = s->dx / l, uz = s->dz / l;
         const float y = 7;
-        vp_vec3 head = vp_v3(s->x + ux * 5, y, s->z + uz * 5);
-        vp_vec3 tail = vp_v3(s->x - ux * 14, y, s->z - uz * 14);
-        vp_color(d, 255, 255, 255);
-        vp3d_scene_line(SCENE, tail, head);
-        vp3d_scene_line(SCENE, head, tail);
-        color(d, ST()->laser);
-        for (int k = -1; k <= 1; k += 2) {
-            vp3d_scene_line(SCENE, vp_v3(s->x - ux * 10 + nx * k * 1.8f, y + k * 0.8f, s->z - uz * 10 + nz * k * 1.8f),
-                            vp_v3(s->x + ux * 3.5f + nx * k * 0.8f, y, s->z + uz * 3.5f + nz * k * 0.8f));
-            vp3d_scene_line(SCENE, vp_v3(s->x - ux * 6 + nx * k * 0.8f, y - k * 1.0f, s->z - uz * 6 + nz * k * 0.8f),
-                            vp_v3(s->x + ux * 4 + nx * k * 0.3f, y, s->z + uz * 4 + nz * k * 0.3f));
-        }
-        vp_color(d, 255, 255, 255);
-        float a = (float)t * 25 + i;
-        float r = 3.8f;
-        for (int k = 0; k < 4; k++) {
-            float b = a + k * PI / 4;
-            vp3d_scene_line(SCENE, vp_v3(head.x + cosf(b) * r, y + sinf(b) * r * 0.8f, head.z + sinf(b) * r * 0.4f),
-                            vp_v3(head.x - cosf(b) * r, y - sinf(b) * r * 0.8f, head.z - sinf(b) * r * 0.4f));
-        }
+        vp3d_scene_line(SCENE, vp_v3(s->x - ux * 14, y, s->z - uz * 14), vp_v3(s->x + ux * 5, y, s->z + uz * 5));
     }
 
     /* shock waves on the floor */
@@ -911,7 +864,7 @@ void render_world(vp_dvg *d, const world *w, double t)
         if (r->life <= 0) continue;
         float k = r->life / r->max;
         color(d, rgb_scale(k > 0.8f ? mkrgb(255, 255, 255) : r->c, k * 1.3f));
-        const int n = r->r > 25 ? 20 : 14;
+        const int n = r->r > 25 ? 14 : 10;
         vp_vec3 prev = vp_v3(r->x + r->r, r->y, r->z);
         for (int j = 1; j <= n; j++) {
             float a = 2 * PI * j / n;

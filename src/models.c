@@ -4,8 +4,9 @@
  * Every part is a closed solid, so that drawn through a scene each model
  * hides what is behind it (its own far limbs, the floor, the robots behind).
  * Legs and arms are separate meshes swung about the hip and the shoulder.
- * Parts marked DETAIL (visors, belts, hair...) are left out far from the
- * camera: the beam pays for every line.
+ * Parts marked DETAIL (visors, hair, feet, hands...) are left out far from
+ * the camera: the beam pays for every line. From a distance a figure is
+ * legs, body, head and arms, six boxes.
  */
 #include "models.h"
 
@@ -26,7 +27,7 @@ typedef struct {
     vp3d_mode  mode;
 } part;
 
-#define MAX_PARTS 14
+#define MAX_PARTS 16
 
 typedef struct {
     part  parts[MAX_PARTS];
@@ -217,22 +218,34 @@ static part *detail(part *p)
     return p;
 }
 
-/* A leg: thigh-and-shin box and a foot, swinging about the hip. */
-static part *leg(model *md, float x, float hip, float w, float d, float foot_len, int left)
+/* A leg: thigh-and-shin box and a foot, swinging about the hip. The foot is
+ * a DETAIL part of its own: far away a leg is a stick (a box is 12 lines,
+ * and the beam pays for each). `c` NULL: the pose's color. */
+static void leg(model *md, float x, float hip, float w, float d, float foot_len, int left, const rgb *c)
 {
     vp3d_mesh *m = mesh_new();
-    add_box(m, x, hip / 2 + 0.4f, 0, w, hip - 0.8f, d);
-    add_box(m, x, 0.4f, foot_len * 0.25f, w * 1.15f, 0.8f, foot_len);
-    return add_part(md, mesh_done(m, 30), left ? A_LEG_L : A_LEG_R, vp_v3(0, hip, 0), VP3D_SOLID);
+    add_box(m, x, hip / 2, 0, w, hip, d);
+    part *p = add_part(md, mesh_done(m, 30), left ? A_LEG_L : A_LEG_R, vp_v3(0, hip, 0), VP3D_SOLID);
+    if (c) colored(p, *c);
+    vp3d_mesh *f = mesh_new();
+    add_box(f, x, 0.4f, foot_len * 0.25f, w * 1.15f, 0.8f, foot_len);
+    p = detail(add_part(md, mesh_done(f, 30), left ? A_LEG_L : A_LEG_R, vp_v3(0, hip, 0), VP3D_SOLID));
+    if (c) colored(p, *c);
 }
 
-/* An arm with a hand, swinging about the shoulder. */
-static part *arm(model *md, float x, float shoulder, float len, float w, float hand, int left)
+/* An arm with a hand, swinging about the shoulder; the hand a DETAIL part,
+ * as the foot. */
+static void arm(model *md, float x, float shoulder, float len, float w, float hand, int left, const rgb *c)
 {
     vp3d_mesh *m = mesh_new();
     add_box(m, x, shoulder - len / 2, 0, w, len, w);
-    if (hand > 0) add_box(m, x, shoulder - len - hand / 2 + 0.3f, 0.2f, hand, hand, hand);
-    return add_part(md, mesh_done(m, 30), left ? A_ARM_L : A_ARM_R, vp_v3(0, shoulder, 0), VP3D_SOLID);
+    part *p = add_part(md, mesh_done(m, 30), left ? A_ARM_L : A_ARM_R, vp_v3(0, shoulder, 0), VP3D_SOLID);
+    if (c) colored(p, *c);
+    if (hand <= 0) return;
+    vp3d_mesh *h = mesh_new();
+    add_box(h, x, shoulder - len - hand / 2 + 0.3f, 0.2f, hand, hand, hand);
+    p = detail(add_part(md, mesh_done(h, 30), left ? A_ARM_L : A_ARM_R, vp_v3(0, shoulder, 0), VP3D_SOLID));
+    if (c) colored(p, *c);
 }
 
 /* ---- the models ---------------------------------------------------------- */
@@ -242,8 +255,8 @@ static void build_player(model *md)
     /* the original's hero: a big red-orange head, a slim white body and
      * legs, magenta arms (the Robotron player sprite) */
     rgb orange = mkrgb(255, 110, 20), red = mkrgb(255, 30, 20), magenta = mkrgb(255, 40, 255);
-    leg(md, -0.8f, 5.6f, 1.2f, 1.3f, 2.2f, 1);
-    leg(md, 0.8f, 5.6f, 1.2f, 1.3f, 2.2f, 0);
+    leg(md, -0.8f, 5.6f, 1.2f, 1.3f, 2.2f, 1, NULL);
+    leg(md, 0.8f, 5.6f, 1.2f, 1.3f, 2.2f, 0, NULL);
     vp3d_mesh *t = mesh_new();
     add_taper(t, 0, 8.0f, 0, 2.4f, 4.8f, 1.8f, 2.8f, 2.0f);   /* the white body */
     solid(md, t);
@@ -252,15 +265,17 @@ static void build_player(model *md)
     colored(solid(md, h), orange);
     vp3d_mesh *hair = mesh_new();
     add_box(hair, 0, 13.7f, -0.2f, 4.6f, 1.0f, 4.0f);          /* the red mop on top */
-    add_box(hair, -2.1f, 12.4f, -0.2f, 0.7f, 2.0f, 3.6f);      /* and at the sides */
-    add_box(hair, 2.1f, 12.4f, -0.2f, 0.7f, 2.0f, 3.6f);
     colored(solid(md, hair), red);
+    vp3d_mesh *sides = mesh_new();
+    add_box(sides, -2.1f, 12.4f, -0.2f, 0.7f, 2.0f, 3.6f);     /* and at the sides */
+    add_box(sides, 2.1f, 12.4f, -0.2f, 0.7f, 2.0f, 3.6f);
+    detail(colored(solid(md, sides), red));
     vp3d_mesh *eyes = mesh_new();                              /* the dark eyes */
     add_box(eyes, -0.8f, 12.3f, 1.75f, 0.7f, 0.7f, 0.2f);
     add_box(eyes, 0.8f, 12.3f, 1.75f, 0.7f, 0.7f, 0.2f);
     detail(colored(solid(md, eyes), mkrgb(90, 0, 0)));
-    colored(arm(md, -2.0f, 10.0f, 4.0f, 1.0f, 1.2f, 1), magenta);
-    colored(arm(md, 2.0f, 10.0f, 4.0f, 1.0f, 1.2f, 0), magenta);
+    arm(md, -2.0f, 10.0f, 4.0f, 1.0f, 1.2f, 1, &magenta);
+    arm(md, 2.0f, 10.0f, 4.0f, 1.0f, 1.2f, 0, &magenta);
     md->height = 14.5f;
     md->color = mkrgb(255, 255, 255);
 }
@@ -268,11 +283,10 @@ static void build_player(model *md)
 static void build_grunt(model *md)
 {
     rgb yellow = mkrgb(255, 220, 0), green = mkrgb(40, 230, 120);
-    colored(leg(md, -1.6f, 5.2f, 2.0f, 2.2f, 3.2f, 1), green);
-    colored(leg(md, 1.6f, 5.2f, 2.0f, 2.2f, 3.2f, 0), green);
+    leg(md, -1.6f, 5.2f, 2.0f, 2.2f, 3.2f, 1, &green);
+    leg(md, 1.6f, 5.2f, 2.0f, 2.2f, 3.2f, 0, &green);
     vp3d_mesh *b = mesh_new();
-    add_box(b, 0, 5.7f, 0, 4.8f, 1.2f, 3.0f);                  /* hips */
-    add_taper(b, 0, 8.6f, 0, 5.4f, 4.6f, 3.6f, 7.0f, 4.2f);    /* torso */
+    add_taper(b, 0, 8.0f, 0, 4.8f, 5.8f, 3.0f, 7.0f, 4.2f);    /* hips and torso in one */
     solid(md, b);
     vp3d_mesh *h = mesh_new();
     add_box(h, 0, 12.2f, 0, 3.6f, 2.6f, 3.2f);                 /* head */
@@ -284,8 +298,8 @@ static void build_grunt(model *md)
     vp3d_mesh *ant = mesh_new();                               /* antenna */
     add_line(ant, 0, 13.5f, 0, 0, 15.0f, -0.6f);
     detail(add_part(md, mesh_done(ant, 40), A_NONE, vp_v3(0, 0, 0), VP3D_WIREFRAME));
-    colored(arm(md, -4.3f, 10.3f, 4.4f, 1.6f, 2.2f, 1), green);
-    colored(arm(md, 4.3f, 10.3f, 4.4f, 1.6f, 2.2f, 0), green);
+    arm(md, -4.3f, 10.3f, 4.4f, 1.6f, 2.2f, 1, &green);
+    arm(md, 4.3f, 10.3f, 4.4f, 1.6f, 2.2f, 0, &green);
     md->height = 15;
     md->color = mkrgb(255, 40, 40);
 }
@@ -294,11 +308,10 @@ static void build_hulk(model *md)
 {
     /* the original: a wide green robot on red legs, an antenna on its head */
     rgb green = mkrgb(40, 255, 40), dark = mkrgb(20, 170, 40), red = mkrgb(255, 50, 30);
-    colored(leg(md, -2.2f, 6.0f, 2.6f, 3.0f, 4.0f, 1), red);
-    colored(leg(md, 2.2f, 6.0f, 2.6f, 3.0f, 4.0f, 0), red);
+    leg(md, -2.2f, 6.0f, 2.6f, 3.0f, 4.0f, 1, &red);
+    leg(md, 2.2f, 6.0f, 2.6f, 3.0f, 4.0f, 0, &red);
     vp3d_mesh *b = mesh_new();
-    add_box(b, 0, 6.6f, 0, 6.2f, 1.6f, 4.4f);                  /* belt */
-    add_taper(b, 0, 10.8f, 0, 7.0f, 6.8f, 5.0f, 10.4f, 6.0f);  /* the chest */
+    add_taper(b, 0, 10.0f, 0, 6.2f, 8.4f, 4.4f, 10.4f, 6.0f);  /* belt and chest in one */
     solid(md, b);
     vp3d_mesh *pads = mesh_new();
     add_box(pads, -5.8f, 14.0f, 0, 3.0f, 1.8f, 4.0f);          /* shoulder pads */
@@ -314,34 +327,34 @@ static void build_hulk(model *md)
     vp3d_mesh *visor = mesh_new();
     add_box(visor, 0, 15.8f, 2.4f, 3.0f, 0.8f, 0.5f);
     detail(colored(solid(md, visor), red));
-    colored(arm(md, -6.4f, 13.4f, 6.0f, 2.4f, 3.0f, 1), green);
-    colored(arm(md, 6.4f, 13.4f, 6.0f, 2.4f, 3.0f, 0), green);
+    arm(md, -6.4f, 13.4f, 6.0f, 2.4f, 3.0f, 1, &green);
+    arm(md, 6.4f, 13.4f, 6.0f, 2.4f, 3.0f, 0, &green);
     md->height = 20;
     md->color = green;
 }
 
 static void build_brain(model *md)
 {
-    rgb blue = mkrgb(80, 120, 255), pink = mkrgb(255, 120, 255);
-    colored(leg(md, -0.9f, 5.6f, 1.3f, 1.4f, 2.2f, 1), mkrgb(40, 220, 80));
-    colored(leg(md, 0.9f, 5.6f, 1.3f, 1.4f, 2.2f, 0), mkrgb(40, 220, 80));
+    rgb blue = mkrgb(80, 120, 255), pink = mkrgb(255, 120, 255), legs = mkrgb(40, 220, 80);
+    leg(md, -0.9f, 5.6f, 1.3f, 1.4f, 2.2f, 1, &legs);
+    leg(md, 0.9f, 5.6f, 1.3f, 1.4f, 2.2f, 0, &legs);
     vp3d_mesh *b = mesh_new();
     add_taper(b, 0, 7.8f, 0, 3.0f, 4.4f, 2.0f, 3.8f, 2.4f);
     colored(solid(md, b), blue);
     vp3d_mesh *face = mesh_new();
     add_box(face, 0, 10.8f, 0.4f, 3.0f, 2.2f, 2.4f);
     colored(solid(md, face), mkrgb(60, 140, 255));             /* the blue face */
-    vp3d_mesh *br = mesh_new();                                /* the big brain */
-    add_frustum(br, 8, 0, -0.4f, 11.8f, 4.0f, 14.6f, 4.6f, PI / 8);
-    add_frustum(br, 8, 0, -0.4f, 14.6f, 4.6f, 16.6f, 2.6f, PI / 8);
+    vp3d_mesh *br = mesh_new();                                /* the big brain, six-sided */
+    add_frustum(br, 6, 0, -0.4f, 11.8f, 4.0f, 14.6f, 4.6f, PI / 6);
+    add_frustum(br, 6, 0, -0.4f, 14.6f, 4.6f, 16.6f, 2.6f, PI / 6);
     solid(md, br);
     vp3d_mesh *folds = mesh_new();                             /* its folds */
     add_line(folds, 0, 16.7f, -2.6f, 0, 16.7f, 2.2f);
     add_line(folds, -2.2f, 16.0f, -3.0f, -2.6f, 14.8f, 3.0f);
     add_line(folds, 2.2f, 16.0f, -3.0f, 2.6f, 14.8f, 3.0f);
     detail(colored(add_part(md, mesh_done(folds, 40), A_NONE, vp_v3(0, 0, 0), VP3D_WIREFRAME), pink));
-    colored(arm(md, -2.4f, 9.6f, 3.8f, 1.0f, 1.0f, 1), blue);
-    colored(arm(md, 2.4f, 9.6f, 3.8f, 1.0f, 1.0f, 0), blue);
+    arm(md, -2.4f, 9.6f, 3.8f, 1.0f, 1.0f, 1, &blue);
+    arm(md, 2.4f, 9.6f, 3.8f, 1.0f, 1.0f, 0, &blue);
     md->height = 17;
     md->color = mkrgb(200, 60, 255);
 }
@@ -349,8 +362,8 @@ static void build_brain(model *md)
 static void build_prog(model *md)
 {
     /* a human, scrambled: tall, thin, all one color */
-    leg(md, -0.9f, 5.6f, 1.2f, 1.2f, 2.0f, 1);
-    leg(md, 0.9f, 5.6f, 1.2f, 1.2f, 2.0f, 0);
+    leg(md, -0.9f, 5.6f, 1.2f, 1.2f, 2.0f, 1, NULL);
+    leg(md, 0.9f, 5.6f, 1.2f, 1.2f, 2.0f, 0, NULL);
     vp3d_mesh *m = mesh_new();
     add_octa(m, 0, 9.4f, 0, 2.4f, 4.0f, 1.6f);
     add_box(m, 0, 14.2f, 0, 2.2f, 2.2f, 2.2f);
@@ -362,11 +375,10 @@ static void build_prog(model *md)
 static void build_mommy(model *md)
 {
     rgb skin = mkrgb(255, 190, 150), hair = mkrgb(255, 230, 0);
-    colored(leg(md, -0.8f, 3.4f, 1.0f, 1.0f, 1.8f, 1), skin);
-    colored(leg(md, 0.8f, 3.4f, 1.0f, 1.0f, 1.8f, 0), skin);
+    leg(md, -0.8f, 3.4f, 1.0f, 1.0f, 1.8f, 1, &skin);
+    leg(md, 0.8f, 3.4f, 1.0f, 1.0f, 1.8f, 0, &skin);
     vp3d_mesh *d = mesh_new();
-    add_frustum(d, 6, 0, 0, 3.0f, 3.4f, 7.4f, 1.6f, 0);        /* the dress */
-    add_taper(d, 0, 8.6f, 0, 2.8f, 2.4f, 1.8f, 3.2f, 2.0f);    /* bodice */
+    add_frustum(d, 6, 0, 0, 3.0f, 3.4f, 9.8f, 1.6f, 0);        /* the dress, up to the shoulders */
     solid(md, d);
     vp3d_mesh *h = mesh_new();
     add_box(h, 0, 11.2f, 0, 2.4f, 2.6f, 2.4f);
@@ -375,8 +387,8 @@ static void build_mommy(model *md)
     add_box(hr, 0, 12.6f, -0.3f, 2.8f, 0.8f, 2.8f);
     add_box(hr, 0, 10.4f, -1.6f, 2.6f, 3.6f, 0.8f);            /* long hair behind */
     detail(colored(solid(md, hr), hair));
-    colored(arm(md, -2.2f, 9.6f, 3.6f, 0.9f, 0.9f, 1), skin);
-    colored(arm(md, 2.2f, 9.6f, 3.6f, 0.9f, 0.9f, 0), skin);
+    arm(md, -2.2f, 9.6f, 3.6f, 0.9f, 0.9f, 1, &skin);
+    arm(md, 2.2f, 9.6f, 3.6f, 0.9f, 0.9f, 0, &skin);
     md->height = 13.5f;
     md->color = mkrgb(255, 90, 160);
 }
@@ -384,8 +396,8 @@ static void build_mommy(model *md)
 static void build_daddy(model *md)
 {
     rgb skin = mkrgb(255, 190, 150), hat = mkrgb(255, 220, 140);
-    leg(md, -1.1f, 5.4f, 1.5f, 1.6f, 2.4f, 1);
-    leg(md, 1.1f, 5.4f, 1.5f, 1.6f, 2.4f, 0);
+    leg(md, -1.1f, 5.4f, 1.5f, 1.6f, 2.4f, 1, NULL);
+    leg(md, 1.1f, 5.4f, 1.5f, 1.6f, 2.4f, 0, NULL);
     vp3d_mesh *s = mesh_new();
     add_taper(s, 0, 8.0f, 0, 3.8f, 5.2f, 2.4f, 4.8f, 2.6f);    /* the suit */
     solid(md, s);
@@ -399,8 +411,8 @@ static void build_daddy(model *md)
     add_box(ht, 0, 13.4f, 0, 4.0f, 0.6f, 4.0f);                /* brim */
     add_box(ht, 0, 14.5f, 0, 2.6f, 1.6f, 2.6f);                /* crown */
     detail(colored(solid(md, ht), hat));
-    arm(md, -3.0f, 10.2f, 4.4f, 1.2f, 1.1f, 1);
-    arm(md, 3.0f, 10.2f, 4.4f, 1.2f, 1.1f, 0);
+    arm(md, -3.0f, 10.2f, 4.4f, 1.2f, 1.1f, 1, NULL);
+    arm(md, 3.0f, 10.2f, 4.4f, 1.2f, 1.1f, 0, NULL);
     md->height = 15.5f;
     md->color = mkrgb(70, 110, 255);
 }
@@ -408,11 +420,10 @@ static void build_daddy(model *md)
 static void build_mikey(model *md)
 {
     rgb skin = mkrgb(255, 190, 150), green = mkrgb(60, 255, 60);
-    colored(leg(md, -0.7f, 3.4f, 1.0f, 1.0f, 1.6f, 1), skin);
-    colored(leg(md, 0.7f, 3.4f, 1.0f, 1.0f, 1.6f, 0), skin);
+    leg(md, -0.7f, 3.4f, 1.0f, 1.0f, 1.6f, 1, &skin);
+    leg(md, 0.7f, 3.4f, 1.0f, 1.0f, 1.6f, 0, &skin);
     vp3d_mesh *b = mesh_new();
-    add_box(b, 0, 3.8f, 0, 2.6f, 1.2f, 1.6f);                  /* shorts */
-    add_box(b, 0, 5.6f, 0, 2.8f, 2.6f, 1.8f);                  /* shirt */
+    add_box(b, 0, 5.1f, 0, 2.8f, 3.8f, 1.8f);                  /* shorts and shirt in one */
     solid(md, b);
     vp3d_mesh *h = mesh_new();
     add_box(h, 0, 8.0f, 0, 2.2f, 2.2f, 2.2f);
@@ -421,8 +432,8 @@ static void build_mikey(model *md)
     add_box(cap, 0, 9.4f, -0.1f, 2.4f, 0.7f, 2.4f);
     add_box(cap, 0, 9.2f, 1.6f, 2.0f, 0.3f, 1.2f);             /* the peak */
     detail(colored(solid(md, cap), green));
-    colored(arm(md, -1.9f, 6.8f, 2.8f, 0.8f, 0.8f, 1), skin);
-    colored(arm(md, 1.9f, 6.8f, 2.8f, 0.8f, 0.8f, 0), skin);
+    arm(md, -1.9f, 6.8f, 2.8f, 0.8f, 0.8f, 1, &skin);
+    arm(md, 1.9f, 6.8f, 2.8f, 0.8f, 0.8f, 0, &skin);
     md->height = 10;
     md->color = mkrgb(255, 60, 60);
 }
@@ -431,9 +442,9 @@ static void build_spheroid(model *md)
 {
     /* three rings turning round a glowing core */
     vp3d_mesh *m = mesh_new();
-    add_circle(m, 14, 5.4f, 0);
-    add_circle(m, 14, 5.4f, 1);
-    add_circle(m, 14, 5.4f, 2);
+    add_circle(m, 10, 5.4f, 0);
+    add_circle(m, 10, 5.4f, 1);
+    add_circle(m, 10, 5.4f, 2);
     add_part(md, mesh_done(m, 40), A_SPIN_ALL, vp_v3(0, 0, 0), VP3D_WIREFRAME);
     vp3d_mesh *c = mesh_new();
     add_octa(c, 0, 0, 0, 2.0f, 2.0f, 2.0f);
@@ -446,10 +457,10 @@ static void build_enforcer(model *md)
 {
     /* the original: a grey-white dome with a red band, blue underneath */
     vp3d_mesh *m = mesh_new();
-    add_frustum(m, 8, 0, 0, -1.2f, 2.0f, 0, 4.6f, PI / 8);     /* the underside */
+    add_frustum(m, 6, 0, 0, -1.2f, 2.0f, 0, 4.6f, PI / 6);     /* the underside */
     colored(add_part(md, mesh_done(m, 30), A_SPIN, vp_v3(0, 0, 0), VP3D_SOLID), mkrgb(70, 110, 255));
     vp3d_mesh *r = mesh_new();
-    add_frustum(r, 8, 0, 0, 0, 4.6f, 1.0f, 3.6f, PI / 8);      /* the red band */
+    add_frustum(r, 6, 0, 0, 0, 4.6f, 1.0f, 3.6f, PI / 6);      /* the red band */
     colored(add_part(md, mesh_done(r, 30), A_SPIN, vp_v3(0, 0, 0), VP3D_SOLID), mkrgb(255, 40, 40));
     vp3d_mesh *d = mesh_new();
     add_frustum(d, 6, 0, 0, 1.0f, 3.0f, 3.6f, 1.2f, 0);        /* the dome */
@@ -509,7 +520,7 @@ static void build_tank(model *md)
     add_box(face, -1.6f, 7.6f, 3.6f, 1.6f, 1.6f, 0.4f);        /* the eyes */
     add_box(face, 1.6f, 7.6f, 3.6f, 1.6f, 1.6f, 0.4f);
     add_box(face, 0, 4.6f, 3.6f, 3.6f, 0.8f, 0.4f);            /* the mouth */
-    colored(solid(md, face), mkrgb(255, 130, 20));
+    detail(colored(solid(md, face), mkrgb(255, 130, 20)));
     vp3d_mesh *gun = mesh_new();
     add_box(gun, 0, 9.0f, 4.4f, 0.9f, 0.9f, 3.2f);
     detail(colored(solid(md, gun), mkrgb(255, 220, 60)));
@@ -605,9 +616,9 @@ static void build_electrode(model *md, int shape)
     float pts[20][2];
     int n = 0;
     switch (shape) {
-    case 0:                                                    /* a sun: an 8-pointed star */
-        for (int i = 0; i < 16; i++) {
-            float a = i * PI / 8, r = (i & 1) ? 2.4f : 4.8f;
+    case 0:                                                    /* a sun: a 6-pointed star */
+        for (int i = 0; i < 12; i++) {
+            float a = i * PI / 6, r = (i & 1) ? 2.4f : 4.8f;
             pts[n][0] = r * cosf(a); pts[n][1] = cy + r * sinf(a); n++;
         }
         add_slab(m, (const float (*)[2])pts, n, D);
