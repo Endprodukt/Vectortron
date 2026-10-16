@@ -21,12 +21,16 @@ static const struct { model_id m; const char *name; float y; } L[] = {
     { MDL_SKULL, "SKULL", 0 },     { MDL_ELECTRODE0, "ELECTRODE 1", 0 }, { MDL_ELECTRODE1, "ELECTRODE 2", 0 },
     { MDL_ELECTRODE2, "ELECTRODE 3", 0 }, { MDL_ELECTRODE3, "ELECTRODE 4", 0 },
     { MDL_ELECTRODE4, "ELECTRODE 5", 0 }, { MDL_ELECTRODE5, "ELECTRODE 6", 0 },
+    { MDL_ELECTRODE6, "ELECTRODE 7", 0 }, { MDL_ELECTRODE7, "ELECTRODE 8", 0 },
+    { MDL_ELECTRODE8, "ELECTRODE 9", 0 },
 };
 #define N ((int)(sizeof L / sizeof L[0]))
 #define COLS 6
 #define SPACING 28.0f
 
-static int init(vp_game *g) { (void)g; models_init(); return VP_OK; }
+static vp3d_scene *scene;
+
+static int init(vp_game *g) { (void)g; models_init(); vp3d_scene_create(&scene); return VP_OK; }
 
 /* Each model gets its own cell: one camera, the model moved across the
  * camera's plane so that it lands in the middle of its cell. */
@@ -67,7 +71,10 @@ static void draw(vp_game *g, vp_dvg *d)
         p.spin = (float)t * 2.5f;
         p.sxz = p.sy = 1;
         p.color = model_color(L[i].m);
-        model_draw(d, &v, L[i].m, &p);
+        p.dim = 1;
+        vp3d_scene_begin(scene, d, &v);
+        model_draw(d, &v, scene, L[i].m, &p);
+        vp3d_scene_end(scene);
         vp_color(d, 150, 150, 150);
         vp_text(d, L[i].name, sx, sy - cellh * 0.42f, 55, VP_TEXT_CENTER);
     }

@@ -92,3 +92,13 @@ vp_program(vt-gallery)
 if(UNIX)
     target_link_libraries(vt-gallery PRIVATE m)
 endif()
+
+# vt-sim: the rules without a screen, played by the demo player (a test).
+add_executable(vt-sim tests/sim.c src/game.c src/waves.c src/demo.c src/render.c src/models.c
+               src/font3d.c src/sound.c)
+vp_program(vt-sim)
+if(UNIX)
+    target_link_libraries(vt-sim PRIVATE m)
+endif()
+enable_testing()
+add_test(NAME sim COMMAND vt-sim 10 40)

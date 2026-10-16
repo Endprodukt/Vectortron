@@ -8,6 +8,7 @@
 
 #include <math.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "controls.h"
@@ -40,6 +41,7 @@ static struct {
     int        last_rank;
     world      demo;
     unsigned   seed;
+    int        autoplay;
 } G;
 
 static int hiscore(void) { return G.table_n > 0 ? G.table[0].score : 0; }
@@ -52,7 +54,7 @@ static void goto_attract(int page)
     G.page = page;
     G.time = 0;
     if (page == A_DEMO) {
-        world_new_game(&G.demo, 1, 0, G.seed++);
+        world_new_game(&G.demo, 1, 0, 5, G.seed++);
         G.demo.demo = 1;
         G.demo.wave = 1 + (int)(G.seed % 4);
         world_start_wave(&G.demo);
@@ -71,7 +73,7 @@ static void start_game(int players)
     G.banner = players > 1 ? 120 : 0;
     G.entry_pending[0] = G.entry_pending[1] = 0;
     for (int p = 0; p < players; p++) {
-        world_new_game(&G.pw[p], SET.lives, SET.extra_man, G.seed++);
+        world_new_game(&G.pw[p], SET.lives, SET.extra_man, SET.difficulty, G.seed++);
         world_start_wave(&G.pw[p]);
     }
     fx_clear();
@@ -117,10 +119,23 @@ static int init(vp_game *g)
     snd_init(vp_game_audio(g));
     models_init();
     render_init();
+    /* the tiled floor costs the beam a lot: a USB-DVG gets the grid */
+    int floor = SET.floor;
+    if (floor < 0) floor = vp_dvg_hardware(vp_game_output(g)) == VP_HW_USB_DVG ? 1 : 0;
+    render_set_floor(floor);
     reload_table();
     G.seed = 2084;
     G.last_rank = -1;
     goto_attract(A_TITLE);
+    /* for development: VT_WAVE=n starts a game at wave n at once,
+     * VT_AUTOPLAY=1 lets the demo player play it */
+    const char *wave = getenv("VT_WAVE");
+    if (wave) {
+        start_game(1);
+        G.pw[0].wave = atoi(wave) > 0 ? atoi(wave) : 1;
+        world_start_wave(&G.pw[0]);
+    }
+    G.autoplay = getenv("VT_AUTOPLAY") != NULL;
     return VP_OK;
 }
 
@@ -141,6 +156,7 @@ static void step_play(vp_input *in)
         return;
     }
     controls_read(in, &c, &w->face_x, &w->face_z);
+    if (G.autoplay) demo_controls(w, &c);
     if (c.camera) {
         SET.camera = (SET.camera + 1) % CAMERA_MODES;
         settings_save();
@@ -258,7 +274,7 @@ static void draw_title(vp_dvg *d, double t)
 {
     vp3d_view v;
     vp3d_view_init(&v, 50);
-    vp3d_look_at(&v, vp_v3(0, 18, -60), vp_v3(0, 6, 0), vp_v3(0, 1, 0));
+    vp3d_look_at(&v, vp_v3(0, 30, -118), vp_v3(0, 9, 0), vp_v3(0, 1, 0));
 
     vp_text_font(VP_FONT_ASTEROIDS);
     /* the logo, in the original's color cycle, with a shadow behind */
@@ -267,14 +283,16 @@ static void draw_title(vp_dvg *d, double t)
         float r = 0.5f + 0.5f * sinf(hue * 6.28f), gg = 0.5f + 0.5f * sinf(hue * 6.28f + 2.1f),
               b = 0.5f + 0.5f * sinf(hue * 6.28f + 4.2f);
         rgb c = mkrgb((int)(255 * r), (int)(255 * gg), (int)(255 * b));
-        text(d, k ? rgb_scale(c, 0.35f) : c, "VECTORTRON", W / 2.0f + k * 14, 3150 - k * 14, 400,
+        text(d, k ? rgb_scale(c, 0.35f) : c, "VECTORTRON", W / 2.0f + k * 12, 3250 - k * 12, 300,
              VP_TEXT_CENTER);
     }
-    text(d, mkrgb(255, 255, 255), "2084", W / 2.0f, 2780, 180, VP_TEXT_CENTER);
+    text(d, mkrgb(255, 255, 255), "2084", W / 2.0f, 2900, 160, VP_TEXT_CENTER);
 
     /* a family walking on a turntable */
     model_pose p;
     memset(&p, 0, sizeof p);
+    p.dim = 1;
+    vp3d_scene_begin(render_scene(), d, &v);
     static const model_id fam[4] = { MDL_DADDY, MDL_MOMMY, MDL_MIKEY, MDL_PLAYER };
     for (int i = 0; i < 4; i++) {
         float a = (float)t * 0.5f + i * 1.5707963f;
@@ -284,12 +302,13 @@ static void draw_title(vp_dvg *d, double t)
         p.walk = (float)t * 9;
         p.sxz = p.sy = 1;
         p.color = model_color(fam[i]);
-        model_draw(d, &v, fam[i], &p);
+        model_draw(d, &v, render_scene(), fam[i], &p);
     }
+    vp3d_scene_end(render_scene());
     vp_text_font(VP_FONT_HERSHEY);
-    text(d, mkrgb(120, 200, 255), "Save the last human family", W / 2.0f, 1080, 110, VP_TEXT_CENTER);
+    text(d, mkrgb(120, 200, 255), "Save the last human family", W / 2.0f, 980, 110, VP_TEXT_CENTER);
     vp_text_font(VP_FONT_ASTEROIDS);
-    text(d, mkrgb(140, 140, 140), "A 3D TRIBUTE TO ROBOTRON 2084 BY WILLIAMS 1982", W / 2.0f, 820, 60,
+    text(d, mkrgb(140, 140, 140), "A 3D TRIBUTE TO ROBOTRON 2084 BY WILLIAMS 1982", W / 2.0f, 760, 60,
          VP_TEXT_CENTER);
     draw_credits_line(d, t);
 }
@@ -346,7 +365,7 @@ static void draw_roster(vp_dvg *d, double t)
         vp_vec3 move = vp_v3_add(vp_v3_scale(right, off_x * half_w), vp_v3_scale(up, off_y * half_h));
         p.x = move.x; p.y += move.y; p.z = move.z;
         p.heading = 0;
-        model_draw(d, &vv, R[i].m, &p);
+        model_draw(d, &vv, NULL, R[i].m, &p);
         text(d, p.color, R[i].name, cx + 820, cy + 160, 100, VP_TEXT_LEFT);
         text(d, mkrgb(255, 255, 255), R[i].pts, cx + 820, cy - 20, 80, VP_TEXT_LEFT);
     }
@@ -379,14 +398,14 @@ static void draw_play(vp_dvg *d, double t)
     else render_wall_hud(d, w, G.cur, G.players, t);
     vp_text_font(VP_FONT_ASTEROIDS);
     if (G.banner > 0 && ((int)G.banner / 8) % 2 == 0) {
-        char buf[16];
+        char buf[24];
         snprintf(buf, sizeof buf, "PLAYER %d", G.cur + 1);
         text(d, mkrgb(255, 255, 0), buf, W / 2.0f, 2100, 220, VP_TEXT_CENTER);
     }
     if (w->ph == PH_OVER) {
         text(d, mkrgb(255, 60, 60), "GAME OVER", W / 2.0f, 2150, 280, VP_TEXT_CENTER);
         if (G.players > 1) {
-            char buf[16];
+            char buf[24];
             snprintf(buf, sizeof buf, "PLAYER %d", G.cur + 1);
             text(d, mkrgb(255, 255, 0), buf, W / 2.0f, 1800, 160, VP_TEXT_CENTER);
         }
@@ -442,5 +461,6 @@ int main(int argc, char **argv)
     desc.shutdown = shutdown;
     desc.update_hz = 60;
     desc.frame_hz = 40;
+    desc.frame_hz_board = 30;       /* a full arena needs the time on the board */
     return vp_run(&desc, argc, argv);
 }

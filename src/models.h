@@ -32,10 +32,13 @@ typedef enum {
     MDL_ELECTRODE3,
     MDL_ELECTRODE4,
     MDL_ELECTRODE5,
+    MDL_ELECTRODE6,
+    MDL_ELECTRODE7,
+    MDL_ELECTRODE8,
     MDL_COUNT
 } model_id;
 
-#define ELECTRODE_SHAPES 6
+#define ELECTRODE_SHAPES 9
 
 typedef struct { unsigned char r, g, b; } rgb;
 
@@ -52,12 +55,18 @@ typedef struct {
     float sxz, sy;      /* scale across and up; 1, 1 normally */
     rgb   color;        /* the model's main color; parts may have their own */
     int   flat_color;   /* 1: every part in `color` (flashes, dying) */
+    float dim;          /* 0 or 1: full brightness; between: dimmer */
 } model_pose;
 
 void models_init(void);
 void models_free(void);
 
-void model_draw(vp_dvg *d, const vp3d_view *v, model_id id, const model_pose *p);
+/* Draw it: into `scene` (hidden where solid things are in front, and hiding
+ * what is behind it), or straight to the board when `scene` is NULL. */
+void model_draw(vp_dvg *d, const vp3d_view *v, vp3d_scene *scene, model_id id, const model_pose *p);
+
+/* Small parts (visors, hair...) are left out beyond this distance. */
+void models_set_lod(float distance);
 
 /* The model's main color, as in the original. */
 rgb  model_color(model_id id);

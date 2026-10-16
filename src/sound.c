@@ -17,7 +17,7 @@ static const char *const NAMES[SND_COUNT] = {
     "prog_make", "brain_die", "cruise", "spheroid_die", "enforcer_birth",
     "enforcer_shot", "enforcer_die", "quark_die", "tank_birth", "tank_shot",
     "shell_bounce", "tank_die", "player_die", "wave_start", "wave_end",
-    "extra_man", "coin", "start",
+    "extra_man", "coin", "start", "grunt_step", "reprogram", "small_die",
 };
 
 /* ---- the synthesizer: a few oscillators, a Williams-style noise ---------- */
@@ -316,6 +316,29 @@ static vp_sound *mk_start(void)
     return syn_end(&s, 1.0f);
 }
 
+static vp_sound *mk_step(void)
+{
+    /* a short low click: the march */
+    synth s; syn_begin(&s, 0.04f);
+    for (int i = 0; i < s.n; i++) {
+        float t = (float)i / RATE, u = t / 0.04f;
+        s.phase += expsweep(220, 90, u) / RATE;
+        s.buf[i] = 0.5f * sq(s.phase) * (1 - u);
+    }
+    return syn_end(&s, 1.0f);
+}
+
+static vp_sound *mk_reprogram(void)
+{
+    synth s; syn_begin(&s, 0.05f);
+    for (int i = 0; i < s.n; i++) {
+        float t = (float)i / RATE, u = t / 0.05f;
+        s.phase += expsweep(700, 1400, u) / RATE;
+        s.buf[i] = 0.25f * sq(s.phase) * (1 - u);
+    }
+    return syn_end(&s, 1.0f);
+}
+
 static vp_sound *make(snd_id id)
 {
     switch (id) {
@@ -343,6 +366,9 @@ static vp_sound *make(snd_id id)
     case SND_EXTRA_MAN:      return mk_extra_man();
     case SND_COIN:           return mk_coin();
     case SND_START:          return mk_start();
+    case SND_GRUNT_STEP:     return mk_step();
+    case SND_REPROGRAM:      return mk_reprogram();
+    case SND_SMALL_DIE:      return mk_noise_boom(0.12f, 10000, 3000, 1800);
     default:                 return NULL;
     }
 }

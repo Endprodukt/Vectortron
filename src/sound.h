@@ -35,6 +35,9 @@ typedef enum {
     SND_EXTRA_MAN,
     SND_COIN,
     SND_START,
+    SND_GRUNT_STEP,     /* the grunts' march */
+    SND_REPROGRAM,      /* a brain at work on a human */
+    SND_SMALL_DIE,      /* a missile, spark or shell shot */
     SND_COUNT
 } snd_id;
 
