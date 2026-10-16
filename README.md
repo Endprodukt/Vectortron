@@ -1,59 +1,62 @@
 # Vectortron
 
-Eine 3D-Vektor-Hommage an **Robotron: 2084** (Williams, 1982) für
-[VectorPie](https://github.com/Goldfinch2/VectorPie) – Raspberry Pi mit
-USB-DVG/BeamForge am echten Vektormonitor, oder im Fenster am PC.
+A 3D vector tribute to **Robotron: 2084** (Williams, 1982) for
+[VectorPie](https://github.com/Goldfinch2/VectorPie): a Raspberry Pi driving
+a real vector monitor through a USB-DVG or BeamForge, or a window on a PC.
 
-Optik und Kamera orientieren sich an **Robotron X**: eine gekachelte Arena,
-Roboter und Menschen als 3D-Modelle mit Verdeckung, eine Kamera, die dem
-Spieler folgt und dynamisch schwenkt, Punkte und Leben an der hinteren Wand.
-Das Spiel selbst – Wellen, Gegnerverhalten, Tempo, Punkte, Ablauf – folgt dem
-**originalen Quellcode** ([historicalsource/robotron](https://github.com/historicalsource/robotron)),
-siehe [docs/robotron-rules.md](docs/robotron-rules.md).
+The look and the camera follow **Robotron X**: a tiled arena, robots and
+humans as 3D models with hidden lines, a camera that follows the player and
+pans as they move, the score and men standing on the far wall. The game
+itself – the waves, the enemies, the speeds, the scores, the flow – follows
+the **original source code**
+([historicalsource/robotron](https://github.com/historicalsource/robotron)),
+see [docs/robotron-rules.md](docs/robotron-rules.md).
 
-## Das Spiel
+## The game
 
-* **40 Wellen** aus der Original-Tabelle (`WVTAB`), danach wiederholen sich
-  die Wellen 21–40. Brain-Wellen (5, 10, 15 …), Tank-Wellen (7, 12, 17 …),
-  Hulk-Wellen (14, 24, 34) und Grunt-Schwärme (9, 19, 29, 39) wie im Original.
-* Gegner mit den Original-Timern und -Geschwindigkeiten: Grunts werden pro
-  Abschuss und über die Zeit schneller (und mehr, wenn man trödelt), Hulks
-  zerquetschen Menschen und Elektroden und lassen sich nur zurückstoßen,
-  Brains machen Menschen zu Progs und schießen Cruise Missiles, Spheroids
-  setzen Enforcer ab, Quarks setzen Tanks ab, Tank-Granaten prallen von den
-  Wänden ab.
-* Punkte wie im Original; Rettungsbonus 1000–5000, Extra-Mann alle 25 000.
-* Pro Leben wird die Welle mit den übrigen Gegnern neu verteilt, wie im
-  Original (übrige Enforcer werden wieder zu Spheroids).
-* Wellenstart mit „Materialisieren“ (Brain-Wellen: Transporter-Effekt),
-  zwischen den Wellen der Rechteck-Tunnel.
-* Jede Welle hat ihre eigenen Farben (Wand, Boden, Laser), im Zehnerzyklus
-  wie die Wandfarben des Originals; Schüsse an der Wand lassen sie in der
-  Laserfarbe aufblitzen.
-* Effekte im Stil von Tempest 2000: Plasmaschüsse mit Funkenschweif und
-  Mündungsfeuer, Funkenregen und Schockwellen bei jedem Treffer,
-  Kamerawackeln, aufzoomende Banner (WAVE, WAVE CLEARED, EXTRA MAN),
-  Feuerwerk am Wellenende, Glitzerspirale bei jeder Rettung.
-* 1 oder 2 Spieler abwechselnd, Münzen/Credits mit START-Lampen, Hall of
-  Fame mit Initialen (erscheint auch im VectorPie-Menü), Attract-Mode mit
-  Titel, Gegnervorstellung, Bestenliste und Demo-Spiel.
+* **40 waves** from the original's table (`WVTAB`); past 40, waves 21–40
+  repeat. Brain waves (5, 10, 15 …), tank waves (7, 12, 17 …), hulk waves
+  (14, 24, 34) and grunt swarms (9, 19, 29, 39) as in the original.
+* The original's timers and speeds: grunts hurry with every kill and over
+  time (more so when you stall), hulks crush humans and electrodes and can
+  only be pushed back, brains turn humans into progs and fire cruise
+  missiles, spheroids drop enforcers, quarks drop tanks, tank shells bounce
+  off the walls.
+* The original's scores; rescue bonus 1000–5000, an extra man every 25,000.
+* A man lost: the robots left are placed anew, as in the original (leftover
+  enforcers turn back into spheroids).
+* Waves "materialize" (brain waves beam in with the transporter), with the
+  rushing rectangles between waves.
+* Every wave has its own colors (wall, floor, laser), in a cycle of ten like
+  the original's wall colors; shots hitting the wall flash it.
+* Tempest 2000 style effects: plasma shots with spark trails and muzzle
+  flashes, spark showers and floor shock waves on every hit, camera shake,
+  zooming banners (WAVE, WAVE CLEARED, EXTRA MAN), fireworks at the end of a
+  wave, a sparkling spiral at every rescue.
+* The models follow the original sprites: the red-headed player, the nine
+  electrode shapes (with their three-step shrink when shot), the blue and
+  green quark, the green tank, the grey enforcer and so on.
+* 1 or 2 players taking turns, coins and credits with the START lamps, a
+  hall of fame with initials (also shown in the VectorPie menu), an attract
+  mode with the title, the robots and their points, the high scores and a
+  demo game.
 
-## Steuerung
+## Controls
 
 | | |
 |---|---|
-| Bewegen | P1-Stick (Pfeiltasten) |
-| Feuern, Twin-Stick | zweiter Stick: `p1_doubleright_*` aus der advmame.rc, oder P2-Stick (Tasten R/F/D/G, Joystick 2, auch analog) |
-| Feuern, Single-Stick | Button 1 (Strg links): feuert in Blickrichtung |
-| Strafe (Single-Stick) | Button 2 (Alt links) halten: Blickrichtung bleibt fest |
-| Kamera wechseln | Button 3 (Leertaste): Robotron X / Arena / klassisch von oben |
-| Start | 1 / 2, Münze 5 / 6, Zurück ins Menü: Esc |
+| Move | P1 stick (arrow keys) |
+| Fire, twin stick | a second stick: `p1_doubleright_*` from advmame.rc, or the P2 stick (keys R/F/D/G, joystick 2, analog too) |
+| Fire, single stick | button 1 (left Ctrl): fires the way you face |
+| Strafe (single stick) | hold button 2 (left Alt): keeps the facing |
+| Camera | button 3 (Space): Robotron X / arena / classic overhead |
+| Start | 1 / 2, coins 5 / 6, back to the menu: Esc |
 
-Twin- und Single-Stick funktionieren gleichzeitig, eine Umschaltung gibt es
-nicht. Gefeuert wird wie im Original in 8 Richtungen, höchstens 4 Schüsse.
+Twin stick and single stick both work at all times; there is nothing to
+switch. As in the original, shots go 8 ways, at most 4 at a time.
 
-Ein Gamepad mit zwei Sticks oder ein Robotron-Panel bindet man in der
-`advmame.rc` des Kabinetts, z. B. (rechter Stick eines Pads als Feuer-Stick):
+A gamepad with two sticks or a Robotron panel is bound in the cabinet's
+`advmame.rc`, for example a pad's right stick as the fire stick:
 
 ```
 input_map[p1_doubleright_up]    joystick_digital[0,1,1,up]
@@ -62,55 +65,56 @@ input_map[p1_doubleright_left]  joystick_digital[0,1,0,left]
 input_map[p1_doubleright_right] joystick_digital[0,1,0,right]
 ```
 
-## Einstellungen
+## Settings
 
-`save/settings.txt` neben dem Programm (wird beim ersten Kamerawechsel
-angelegt):
+`save/settings.txt` next to the executable (written the first time the
+camera is changed):
 
 ```
-free_play = 0     ; 1: START braucht keine Münze
-lives     = 3     ; Männer zu Spielbeginn
-extra_man = 25000 ; Extra-Mann alle so viele Punkte (0: keiner)
-camera    = 0     ; 0 Robotron X, 1 Arena, 2 klassisch von oben
-floor     = -1    ; -1 automatisch, 0 Kacheln, 1 Gitter, 2 keiner
-difficulty = 5    ; MASTER DIFFICULTY des Originals, 0..10 (5 = Tabelle)
+free_play  = 0     ; 1: START needs no coin
+lives      = 3     ; men at the start of a game
+extra_man  = 25000 ; an extra man every this many points (0: none)
+camera     = 0     ; 0 Robotron X, 1 arena, 2 classic overhead
+floor      = -1    ; -1 automatic, 0 tiles, 1 grid, 2 none
+difficulty = 5     ; the original's MASTER DIFFICULTY, 0..10 (5: as the wave table)
 ```
 
-Der gekachelte Boden kostet den Strahl viel; `floor = -1` nimmt auf einer
-USB-DVG automatisch das Gitter, auf BeamForge und im Fenster die Kacheln. Auf
-der Platine läuft das Bild mit 30 Hz (`frame_hz_board`), die Spiellogik immer
-mit 60 Hz wie das Original. `VP_STATS=1` zeigt die Kosten pro Bild.
+The tiled floor costs the beam a lot; `floor = -1` picks the grid on a
+USB-DVG and the tiles on a BeamForge and in a window. On the board the
+picture runs at 30 Hz (`frame_hz_board`); the game logic always runs at
+60 Hz, as the original. `VP_STATS=1` prints what a frame costs.
 
 ## Sounds
 
-**Die Original-Sounds:** Robotron hat ein eigenes Soundboard (Williams, 6808
-mit 8-Bit-DAC), die Sounds stecken in dessen ROM, nicht im Spielcode.
-Vectortron emuliert dieses Board: Beim Start wird das Sound-ROM aus deinem
-eigenen MAME-Set `robotron.zip` geladen, der Original-Soundcode läuft und
-jeder Sound wird mitgeschnitten – so klingt es exakt wie am Automaten. Die
-Befehlsfolgen (z. B. Spielertod = 2× `$11`, dann `$17`) und Prioritäten
-kommen 1:1 aus dem Quellcode des Spiels, und wie auf dem Board gibt es nur
-eine Stimme: Ein Sound unterbricht nur einen mit gleicher oder kleinerer
-Priorität. Brain-Wellen beamen sich mit dem Transporter-Sound herein,
-normale Wellen beginnen still wie im Original.
+**No ROM is needed**: out of the box the game plays sounds made in code, in
+the spirit of the Williams sound board.
 
-Das ROM wird gesucht in:
+**The original sounds**, optionally: Robotron has its own sound board (a
+Williams 6808 with an 8-bit DAC) and the sounds live in its ROM, not in the
+game code. Vectortron emulates that board: when it finds the sound ROM in
+your own MAME set (`robotron.zip`), it runs the original sound code and
+records every sound, so they sound exactly as on the cabinet. The command
+sequences (the player's death: `$11` twice, then `$17`) and the priorities
+come straight from the game's source, and as on the board there is one
+voice: a sound only cuts in on one of the same priority or lower. Brain
+waves beam in with the transporter sound; other waves start silently, as in
+the original.
 
-1. `VT_SOUND_ROM` (eine `robotron.zip` oder die ROM-Datei selbst)
-2. `assets/robotron.zip`, `assets/robotron.snd`, `assets/video_sound_rom_1.ic12` neben dem Programm
-3. den ROM-Ordnern von AdvanceMAME (`dir_rom` in der advmame.rc,
-   `/usr/local/share/advance/rom`, `~/.advance/rom`)
+The ROM is looked for in:
 
-Im ZIP heißt es `video_sound_rom_1.ic12` (ältere Sets: `robotron.snd`).
-Das ROM ist nicht Teil dieses Projekts. Findet sich keins, nimmt das Spiel
-seine eigenen, nachempfundenen Sounds (die erzwingt auch
-`VT_SYNTH_SOUNDS=1`).
+1. `VT_SOUND_ROM` (a `robotron.zip`, or the ROM file itself)
+2. `assets/robotron.zip`, `assets/robotron.snd`, `assets/video_sound_rom_1.ic12` next to the executable
+3. AdvanceMAME's ROM folders (`dir_rom` in advmame.rc, `/usr/local/share/advance/rom`, `~/.advance/rom`)
 
-`vt-sounds [robotron.zip] [ordner]` schreibt alle Original-Sounds als WAV,
-zum Anhören oder Nachbearbeiten.
+In the zip it is `video_sound_rom_1.ic12` (older sets: `robotron.snd`). The
+ROM is not part of this project. `VT_SYNTH_SOUNDS=1` forces the sounds made
+in code.
 
-**Eigene Sounds:** jeder Sound lässt sich durch eine Datei ersetzen:
-`assets/sounds/<name>.wav` (oder `.ogg`) neben dem Programm, mit `<name>` aus
+`vt-sounds [robotron.zip] [folder]` writes all the original sounds as WAV
+files, to listen to or to edit.
+
+**Your own sounds**: any sound can be replaced by a file
+`assets/sounds/<name>.wav` (or `.ogg`) next to the executable, `<name>` one of
 
 `shot grunt_die electrode_die hulk_hit rescue human_die prog_make brain_die
 cruise spheroid_die enforcer_birth enforcer_shot enforcer_die quark_die
@@ -118,39 +122,41 @@ tank_birth tank_shot shell_bounce tank_die player_die wave_start wave_end
 extra_man coin start grunt_step reprogram small_die spark_die shell_die
 prog_die transport start2`
 
-(Der Ordner `assets/` wird beim Bauen mitkopiert und ist in `.gitignore`.)
+(The `assets/` folder is copied next to the executable when building, and
+is ignored by git.)
 
-## Bauen
+## Building
 
-Wie jedes VectorPie-Spiel, aus WSL2 Debian trixie nach `tools/setup-wsl.sh`
-des SDK:
+As any VectorPie game, from WSL2 Debian trixie after the SDK's
+`tools/setup-wsl.sh`:
 
 ```sh
 cmake --preset pc    && cmake --build --preset pc     # Windows: build-pc/vectortron.exe
-cmake --preset pi    && cmake --build --preset pi     # Kabinett: build-pi/vectortron
+cmake --preset pi    && cmake --build --preset pi     # the cabinet: build-pi/vectortron
 cmake --build --preset pi --target vpk                # build-pi/vectortron-0.1.0.vpk
 ```
 
-Das SDK wird gesucht: `-DVECTORPIE_SDK_DIR=<VectorPie>/sdk` (Quellbaum), sonst
-das installierte SDK (`~/VectorPie/dist/<pc|pi>`), sonst wird es von GitHub
-geholt. Unter Linux direkt: `cmake --preset linux && cmake --build --preset linux`.
+The SDK is taken from `-DVECTORPIE_SDK_DIR=<VectorPie>/sdk` (its source
+tree), else the installed SDK (`~/VectorPie/dist/<pc|pi>`), else it is
+fetched from GitHub. On Linux directly: `cmake --preset linux && cmake --build --preset linux`.
 
-Die `.vpk` per USB-Stick (`games/`) oder nach `/persistent/games/packages/`
-kopieren und im Menü unter Settings → GAMES → INSTALL GAMES installieren.
+Copy the `.vpk` to a USB drive's `games/` folder (or to
+`/persistent/games/packages/`) and install it from the menu: Settings →
+GAMES → INSTALL GAMES.
 
-### Werkzeuge
+### Tools
 
-* `vt-gallery --windowed` – alle 3D-Modelle drehend auf einem Bildschirm.
-* `vt-sim [spiele] [wellen]` – die Regeln ohne Bildschirm, gespielt vom
-  Demo-Spieler; prüft, dass nichts aus dem Ruder läuft (`ctest`).
-* `vt-sounds` – die Original-Sounds als WAV (siehe oben).
-* `ctest` prüft außerdem die 6800-Emulation (`cpu_test`, `wms_test`:
-  Befehle, Flags, Interrupt über die PIA, Takt-genaue Tonhöhe).
-* `VT_WAVE=n` startet sofort Welle n, `VT_AUTOPLAY=1` lässt den Demo-Spieler
-  spielen (zum Testen).
+* `vt-gallery --windowed` – every 3D model on one screen, turning.
+* `vt-sim [games] [waves]` – the rules without a screen, played by the demo
+  player; checks that nothing goes astray (`ctest`).
+* `vt-sounds` – the original sounds as WAV files (see above).
+* `ctest` also checks the 6800 emulation (`cpu_test`, `wms_test`:
+  instructions, flags, the interrupt through the PIA, cycle-exact pitch).
+* `VT_WAVE=n` starts a game at wave n at once, `VT_AUTOPLAY=1` lets the demo
+  player play it (for testing).
 
-## Rechtliches
+## Legal
 
-Robotron: 2084 ist eine Marke ihrer Inhaber; Vectortron ist ein nicht
-kommerzielles Fan-Projekt ohne Original-Grafiken oder -Sounds. Die Regeln
-wurden aus dem veröffentlichten Quellcode nachvollzogen.
+Robotron: 2084 is a trademark of its owners; Vectortron is a non-commercial
+fan project with none of the original graphics or sounds. The rules were
+worked out from the published source code.
