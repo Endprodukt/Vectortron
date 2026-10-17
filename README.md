@@ -104,8 +104,9 @@ the executable (it can be edited by hand too). The picture size and
 position apply to everything drawn, the game's lines and the SDK's.
 
 There is no floor: a vector monitor has only so much beam time a frame,
-and a full wave takes it all. The picture runs at 60 Hz, on the board too,
-as the game logic. `VP_STATS=1` prints what a frame costs.
+and a full wave takes it all. The picture runs at 40 Hz, on the board too;
+the game logic at 60 Hz, as the original. `VP_STATS=1` prints what a frame
+costs.
 
 ## Sounds
 

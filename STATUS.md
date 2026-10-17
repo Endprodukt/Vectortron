@@ -115,6 +115,9 @@ Vectortron, geholt von https://github.com/endprodukt/vectortron (Branch
   mehr nur um y zur Kamera; ein Quadrat ist in jeder Kamera ein Quadrat.
   Auch das Schrumpfen beim Abschuss. Auf dem Automaten.
 
+- Bild wieder auf 40 Hz (`frame_hz = 40`, Logik 60 Hz), auf Wunsch des
+  Besitzers zum Vergleich. Auf dem Automaten.
+
 ## Behobene Fehler
 
 - MAME 0.289 nennt die Sound-ROM `video_sound_rom_3_std_767.ic12`; das Spiel

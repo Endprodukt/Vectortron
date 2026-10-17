@@ -536,6 +536,6 @@ int main(int argc, char **argv)
     desc.draw = draw;
     desc.shutdown = shutdown;
     desc.update_hz = 60;
-    desc.frame_hz = 60;             /* on the board too: a vector monitor flickers below */
+    desc.frame_hz = 40;             /* the picture, on the board too (the logic runs at 60) */
     return vp_run(&desc, argc, argv);
 }
