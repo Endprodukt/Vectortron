@@ -50,6 +50,7 @@ rgb rgb_scale(rgb c, float k);
 typedef struct {
     float x, y, z;
     float heading;      /* radians about y; 0 faces +z */
+    int   billboard;    /* 1: turned to face the eye, as a sprite (heading ignored) */
     float walk;         /* walk cycle phase in radians; legs and arms swing */
     float spin;         /* free rotation for spinning things */
     float sxz, sy;      /* scale across and up; 1, 1 normally */

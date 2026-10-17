@@ -1148,8 +1148,7 @@ static void player_collide(world *w)
         /* the rescue: 1000, 2000 ... 5000 (RRH11.ASM:453-470) */
         if (w->rescued < 5) w->rescued++;
         add_score(w, 1000 * w->rescued);
-        fx_popup(e->x, e->z, 1000 * w->rescued);
-        fx_rescue(e->x, e->z);
+        fx_rescue(e->x, e->z);      /* no score pop-up here: the owner's wish */
         snd_play(SND_RESCUE);
         removeat(w, i);
     }

@@ -721,11 +721,20 @@ static vp_xf about(vp_vec3 pivot, vp_xf r)
 void model_draw(vp_dvg *d, const vp3d_view *v, vp3d_scene *scene, model_id id, const model_pose *p)
 {
     const model *md = &M[id];
-    vp_xf base = vp_xf_mul2(vp_xf_translate(p->x, p->y, p->z),
-                            vp_xf_mul2(vp_xf_scale(p->sxz, p->sy, p->sxz), vp_xf_rot_y(p->heading)));
-    float swing = 0.6f * sinf(p->walk);
     vp_vec3 eye = vp3d_eye(v);
-    float dist = vp_v3_length(vp_v3_sub(eye, vp_v3(p->x, p->y, p->z)));
+    vp_vec3 to_eye = vp_v3_sub(eye, vp_v3(p->x, p->y, p->z));
+    float dist = vp_v3_length(to_eye);
+    vp_xf turn;
+    if (p->billboard) {
+        /* the xy plane square to the eye: turned about y, then tilted up */
+        float flat = sqrtf(to_eye.x * to_eye.x + to_eye.z * to_eye.z);
+        turn = vp_xf_mul2(vp_xf_rot_y(atan2f(to_eye.x, to_eye.z)), vp_xf_rot_x(-atan2f(to_eye.y, flat)));
+    } else {
+        turn = vp_xf_rot_y(p->heading);
+    }
+    vp_xf base = vp_xf_mul2(vp_xf_translate(p->x, p->y, p->z),
+                            vp_xf_mul2(vp_xf_scale(p->sxz, p->sy, p->sxz), turn));
+    float swing = 0.6f * sinf(p->walk);
     int far = dist > lod_distance;
     rgb last = mkrgb(1, 2, 3);
     int have = 0;

@@ -106,6 +106,15 @@ Vectortron, geholt von https://github.com/endprodukt/vectortron (Branch
   Alles DETAIL-Teile, also nur nah an der Kamera (Robotron-X-Kamera)
   gezeichnet; mit der Arena-Kamera ändert sich nichts. Auf dem Automaten.
 
+- Neunte Runde: die WAVE-Zeile oben rechts ist weg (das Banner nennt die
+  Welle beim Start); beim Einsammeln der Familie kein Punkte-Pop-up mehr
+  auf dem Feld (die 1000 für Spheroid und Quark bleiben). Auf dem Automaten.
+
+- Elektroden als Sprites: die flachen Umrisse stehen jetzt genau zum Auge
+  gedreht (`model_pose.billboard`: um y gedreht und zum Auge gekippt), nicht
+  mehr nur um y zur Kamera; ein Quadrat ist in jeder Kamera ein Quadrat.
+  Auch das Schrumpfen beim Abschuss. Auf dem Automaten.
+
 ## Behobene Fehler
 
 - MAME 0.289 nennt die Sound-ROM `video_sound_rom_3_std_767.ic12`; das Spiel

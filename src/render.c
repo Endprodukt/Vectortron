@@ -563,7 +563,7 @@ static void arena_into_scene(vp_dvg *d, double t)
     }
 }
 
-/* The score, the men left and the wave, standing on the far wall: fixed to
+/* The score and the men left, standing on the far wall: fixed to
  * it, the score at its left end, the wave and the men (a number) at its
  * right. With two players both scores stand there, 1UP and 2UP, the one
  * playing blinking. */
@@ -604,9 +604,7 @@ void render_wall_hud(vp_dvg *d, const world *w1, const world *w2, int players, i
     color(d, model_color(MDL_PLAYER));
     snprintf(buf, sizeof buf, "MEN %d", men);
     font3d_text(d, &VIEW, buf, vp_v3(x0 + row, base, zb), right, up, h * 0.8f, FONT3D_RIGHT);
-    vp_color(d, 80, 220, 120);
-    snprintf(buf, sizeof buf, "WAVE %d", w->wave);
-    font3d_text(d, &VIEW, buf, vp_v3(x0 + row, base + h * (players > 1 ? 1.7f : 1.4f), zb), right, up, h * 0.57f, FONT3D_RIGHT);
+    /* (no wave number: the banner says it as the wave starts) */
 }
 
 /* ---- things -------------------------------------------------------------- */
@@ -729,7 +727,7 @@ void render_world(vp_dvg *d, const world *w, double t)
         } else {
             pose.sxz = pose.sy = 1;
         }
-        if (e->type == T_ELECTRODE) pose.heading = CAM.yaw;      /* flat, like the sprites */
+        pose.billboard = e->type == T_ELECTRODE;    /* flat and square to the eye, like the sprites */
         if (e->type == T_QUARK) {           /* the original's square grows and shrinks */
             float pulse = 0.65f + 0.35f * fabsf(sinf((float)t * 4 + e->z));
             pose.sxz *= pulse;
@@ -786,6 +784,7 @@ void render_world(vp_dvg *d, const world *w, double t)
         pose.z = w->pz;
         pose.y = 0;
         pose.heading = w->pheading;
+        pose.billboard = 0;
         pose.walk = w->pwalk;
         pose.spin = 0;
         pose.sxz = pose.sy = 1;
@@ -847,7 +846,7 @@ void render_world(vp_dvg *d, const world *w, double t)
         memset(&pose, 0, sizeof pose);
         pose.x = SH[i].x;
         pose.z = SH[i].z;
-        pose.heading = CAM.yaw;
+        pose.billboard = 1;
         pose.sxz = pose.sy = k;
         pose.flat_color = 1;
         pose.dim = 1;
@@ -862,6 +861,7 @@ void render_world(vp_dvg *d, const world *w, double t)
         pose.z = K[i].z;
         pose.y = 0;
         pose.heading = CAM.yaw;
+        pose.billboard = 0;
         pose.sxz = pose.sy = 1;
         pose.flat_color = 1;
         pose.dim = 1;
