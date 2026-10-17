@@ -204,6 +204,21 @@ static part *add_part(model *md, vp3d_mesh *mesh, anim a, vp_vec3 pivot, vp3d_mo
 }
 
 static part *solid(model *md, vp3d_mesh *mesh) { return add_part(md, mesh_done(mesh, 30), A_NONE, vp_v3(0, 0, 0), VP3D_SOLID); }
+static part *flat(model *md, vp3d_mesh *mesh) { return add_part(md, mesh_done(mesh, 40), A_NONE, vp_v3(0, 0, 0), VP3D_WIREFRAME); }
+
+/* A flat rectangle lying on a face: in the xy plane at z (axis 2) or in the
+ * xz plane at y (axis 1). Four lines instead of a box's twelve, for the
+ * plates, visors and eyes that only sit on a surface. */
+static void add_plate(vp3d_mesh *m, float cx, float cy, float cz, float w, float h, int axis)
+{
+    float pts[4][3];
+    for (int i = 0; i < 4; i++) {
+        float u = (i == 1 || i == 2) ? w / 2 : -w / 2, v = i >= 2 ? h / 2 : -h / 2;
+        if (axis == 2) { pts[i][0] = cx + u; pts[i][1] = cy + v; pts[i][2] = cz; }
+        else           { pts[i][0] = cx + u; pts[i][1] = cy;     pts[i][2] = cz + v; }
+    }
+    add_poly(m, (const float (*)[3])pts, 4, 1);
+}
 
 static part *colored(part *p, rgb c)
 {
@@ -270,10 +285,10 @@ static void build_player(model *md)
     add_box(sides, -2.1f, 12.4f, -0.2f, 0.7f, 2.0f, 3.6f);     /* and at the sides */
     add_box(sides, 2.1f, 12.4f, -0.2f, 0.7f, 2.0f, 3.6f);
     detail(colored(solid(md, sides), red));
-    vp3d_mesh *eyes = mesh_new();                              /* the dark eyes */
-    add_box(eyes, -0.8f, 12.3f, 1.75f, 0.7f, 0.7f, 0.2f);
-    add_box(eyes, 0.8f, 12.3f, 1.75f, 0.7f, 0.7f, 0.2f);
-    detail(colored(solid(md, eyes), mkrgb(90, 0, 0)));
+    vp3d_mesh *eyes = mesh_new();                              /* the dark eyes, flat on the face */
+    add_plate(eyes, -0.8f, 12.3f, 1.75f, 0.7f, 0.7f, 2);
+    add_plate(eyes, 0.8f, 12.3f, 1.75f, 0.7f, 0.7f, 2);
+    detail(colored(flat(md, eyes), mkrgb(90, 0, 0)));
     arm(md, -2.0f, 10.0f, 4.0f, 1.0f, 1.2f, 1, &magenta);
     arm(md, 2.0f, 10.0f, 4.0f, 1.0f, 1.2f, 0, &magenta);
     md->height = 14.5f;
@@ -291,10 +306,10 @@ static void build_grunt(model *md)
     vp3d_mesh *h = mesh_new();
     add_box(h, 0, 12.2f, 0, 3.6f, 2.6f, 3.2f);                 /* head */
     solid(md, h);
-    vp3d_mesh *visor = mesh_new();
-    add_box(visor, 0, 12.4f, 1.7f, 2.8f, 0.8f, 0.5f);
-    add_box(visor, 0, 8.8f, 2.2f, 3.6f, 2.2f, 0.6f);           /* chest plate */
-    detail(colored(solid(md, visor), yellow));
+    vp3d_mesh *visor = mesh_new();                             /* visor and chest plate, flat on the surface */
+    add_plate(visor, 0, 12.4f, 1.7f, 2.8f, 0.8f, 2);
+    add_plate(visor, 0, 8.8f, 2.2f, 3.6f, 2.2f, 2);
+    detail(colored(flat(md, visor), yellow));
     vp3d_mesh *ant = mesh_new();                               /* antenna */
     add_line(ant, 0, 13.5f, 0, 0, 15.0f, -0.6f);
     detail(add_part(md, mesh_done(ant, 40), A_NONE, vp_v3(0, 0, 0), VP3D_WIREFRAME));
@@ -326,9 +341,9 @@ static void build_hulk(model *md)
     vp3d_mesh *ant = mesh_new();
     add_line(ant, 0, 16.9f, 0.6f, 0, 18.9f, 0.6f);
     add_part(md, mesh_done(ant, 40), A_NONE, vp_v3(0, 0, 0), VP3D_WIREFRAME);
-    vp3d_mesh *visor = mesh_new();
-    add_box(visor, 0, 15.8f, 2.4f, 3.0f, 0.8f, 0.5f);
-    detail(colored(solid(md, visor), red));
+    vp3d_mesh *visor = mesh_new();                             /* flat on the face */
+    add_plate(visor, 0, 15.8f, 2.4f, 3.0f, 0.8f, 2);
+    detail(colored(flat(md, visor), red));
     arm(md, -6.4f, 13.4f, 6.0f, 2.4f, 3.0f, 1, &green);
     arm(md, 6.4f, 13.4f, 6.0f, 2.4f, 3.0f, 0, &green);
     md->height = 20;
@@ -403,9 +418,9 @@ static void build_daddy(model *md)
     vp3d_mesh *s = mesh_new();
     add_taper(s, 0, 8.0f, 0, 3.8f, 5.2f, 2.4f, 4.8f, 2.6f);    /* the suit */
     solid(md, s);
-    vp3d_mesh *tie = mesh_new();
-    add_box(tie, 0, 8.6f, 1.35f, 0.7f, 3.4f, 0.3f);
-    detail(colored(solid(md, tie), mkrgb(255, 40, 40)));
+    vp3d_mesh *tie = mesh_new();                               /* flat on the suit */
+    add_plate(tie, 0, 8.6f, 1.45f, 0.7f, 3.4f, 2);
+    detail(colored(flat(md, tie), mkrgb(255, 40, 40)));
     vp3d_mesh *h = mesh_new();
     add_box(h, 0, 11.8f, 0, 2.6f, 2.6f, 2.6f);
     colored(solid(md, h), skin);
@@ -432,8 +447,10 @@ static void build_mikey(model *md)
     colored(solid(md, h), skin);
     vp3d_mesh *cap = mesh_new();
     add_box(cap, 0, 9.4f, -0.1f, 2.4f, 0.7f, 2.4f);
-    add_box(cap, 0, 9.2f, 1.6f, 2.0f, 0.3f, 1.2f);             /* the peak */
     detail(colored(solid(md, cap), green));
+    vp3d_mesh *peak = mesh_new();                              /* the peak, a flat lid */
+    add_plate(peak, 0, 9.2f, 1.6f, 2.0f, 1.2f, 1);
+    detail(colored(flat(md, peak), green));
     arm(md, -1.9f, 6.8f, 2.8f, 0.8f, 0.8f, 1, &skin);
     arm(md, 1.9f, 6.8f, 2.8f, 0.8f, 0.8f, 0, &skin);
     md->height = 10;
@@ -519,11 +536,11 @@ static void build_tank(model *md)
     vp3d_mesh *hatch = mesh_new();
     add_box(hatch, 0, 10.4f, -0.5f, 2.4f, 1.0f, 2.4f);         /* its hatch, up close */
     detail(solid(md, hatch));
-    vp3d_mesh *face = mesh_new();
-    add_box(face, -1.6f, 7.6f, 3.6f, 1.6f, 1.6f, 0.4f);        /* the eyes */
-    add_box(face, 1.6f, 7.6f, 3.6f, 1.6f, 1.6f, 0.4f);
-    add_box(face, 0, 4.6f, 3.6f, 3.6f, 0.8f, 0.4f);            /* the mouth */
-    detail(colored(solid(md, face), mkrgb(255, 130, 20)));
+    vp3d_mesh *face = mesh_new();                              /* the face, flat on the front */
+    add_plate(face, -1.6f, 7.6f, 3.6f, 1.6f, 1.6f, 2);         /* the eyes */
+    add_plate(face, 1.6f, 7.6f, 3.6f, 1.6f, 1.6f, 2);
+    add_plate(face, 0, 4.6f, 3.6f, 3.6f, 0.8f, 2);             /* the mouth */
+    detail(colored(flat(md, face), mkrgb(255, 130, 20)));
     vp3d_mesh *gun = mesh_new();
     add_box(gun, 0, 9.0f, 4.4f, 0.9f, 0.9f, 3.2f);
     detail(colored(solid(md, gun), mkrgb(255, 220, 60)));

@@ -100,6 +100,12 @@ Vectortron, geholt von https://github.com/endprodukt/vectortron (Branch
   Farben (`render_big_text`, von den Bannern abgetrennt; Echos je nach
   EFFECTS 2/1/0). Auf dem Automaten.
 
+- Achte Runde: die Aufsätze flach statt als Kästen (`add_plate`, 4 statt 12
+  Kanten): Visier und Brustplatte des Grunts, Visier des Hulks, Augen des
+  Spielers, Krawatte von Daddy, Mützenschirm von Mikey, Gesicht des Tanks.
+  Alles DETAIL-Teile, also nur nah an der Kamera (Robotron-X-Kamera)
+  gezeichnet; mit der Arena-Kamera ändert sich nichts. Auf dem Automaten.
+
 ## Behobene Fehler
 
 - MAME 0.289 nennt die Sound-ROM `video_sound_rom_3_std_767.ic12`; das Spiel
