@@ -126,6 +126,15 @@ Vectortron, geholt von https://github.com/endprodukt/vectortron (Branch
   Ecke), die Innenlinie ist die in den Körper verschobene Kontur. Rund 900
   Linien nur auf der Titelseite. Auf dem Automaten.
 
+- Bild wieder auf 60 Hz.
+- Ein Spieler (Mario) meldet: „Wenn die Barrieren weiß werden, verschiebt
+  sich das Bild ein wenig“ auf seinem CRT. Geprüft: das Aufblitzen der Wand
+  ändert nur die Farbe, nicht die Geometrie; was das Bild verschiebt, ist das
+  Kamerawackeln (`fx_shake`) bei jedem Abschuss (1–2,5 Einheiten, zufällig,
+  abklingend), das zeitlich mit dem Blitz zusammenfällt. Das Wackeln bei
+  Abschüssen ist raus; beim Tod des Spielers bleibt es (6). Der Wandblitz in
+  der Laserfarbe bleibt, wie im Original (LFLASH).
+
 ## Behobene Fehler
 
 - MAME 0.289 nennt die Sound-ROM `video_sound_rom_3_std_767.ic12`; das Spiel

@@ -235,7 +235,9 @@ void fx_explode(float x, float y, float z, rgb color, float dirx, float dirz, in
     fx_sparks(x, y + size * 0.5f, z, color, pieces / 2 + 1, 2.2f + size * 0.08f);
     fx_sparks(x, y + size * 0.5f, z, mkrgb(255, 255, 255), pieces / 6 + 1, 3.0f);
     if (size >= 14) fx_ring(x, z, color, 0.9f + size * 0.04f, 22);
-    fx_shake(size > 14 ? 2.5f : 1.0f);
+    /* no camera shake on a kill: on a CRT a picture that jolts with every
+     * hit looks like the monitor slipping (a player's report); the wall's
+     * flash of the laser color stays, as in the original */
 }
 
 void fx_muzzle(float x, float z, float dx, float dz)
