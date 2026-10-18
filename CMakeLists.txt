@@ -71,6 +71,7 @@ add_executable(vectortron
     src/bind.c
     src/service.c
     src/screen.c
+    src/logo.c
 )
 vp_program(vectortron)
 # the picture's size and position (screen.c): every point the game and the

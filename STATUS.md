@@ -118,6 +118,14 @@ Vectortron, geholt von https://github.com/endprodukt/vectortron (Branch
 - Bild wieder auf 40 Hz (`frame_hz = 40`, Logik 60 Hz), auf Wunsch des
   Besitzers zum Vergleich. Auf dem Automaten.
 
+- Titel im Attract-Modus: der Schriftzug des Marquees als Vektoren
+  (`src/logo.c`): VECTORTRON aus klobigen, gerundeten Buchstaben, gelber
+  Umriss um einen roten (die roten Buchstaben mit gelbem Rand des Marquees),
+  darunter 2084 in Gelb mit der Raute als 0 und der spitzen 8. Jede Glyphe
+  sind Konturen auf einem 14 hohen Raster, beim Zeichnen gerundet (3 Punkte je
+  Ecke), die Innenlinie ist die in den Körper verschobene Kontur. Rund 900
+  Linien nur auf der Titelseite. Auf dem Automaten.
+
 ## Behobene Fehler
 
 - MAME 0.289 nennt die Sound-ROM `video_sound_rom_3_std_767.ic12`; das Spiel

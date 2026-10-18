@@ -14,6 +14,7 @@
 #include "bind.h"
 #include "controls.h"
 #include "game.h"
+#include "logo.h"
 #include "models.h"
 #include "render.h"
 #include "screen.h"
@@ -338,17 +339,8 @@ static void draw_title(vp_dvg *d, double t)
     vp3d_view_init(&v, 50);
     vp3d_look_at(&v, vp_v3(0, 30, -118), vp_v3(0, 9, 0), vp_v3(0, 1, 0));
 
-    vp_text_font(VP_FONT_ASTEROIDS);
-    /* the logo, in the original's color cycle, with a shadow behind */
-    for (int k = 3; k >= 0; k--) {
-        float hue = (float)t * 0.6f + k * 0.08f;
-        float r = 0.5f + 0.5f * sinf(hue * 6.28f), gg = 0.5f + 0.5f * sinf(hue * 6.28f + 2.1f),
-              b = 0.5f + 0.5f * sinf(hue * 6.28f + 4.2f);
-        rgb c = mkrgb((int)(255 * r), (int)(255 * gg), (int)(255 * b));
-        text(d, k ? rgb_scale(c, 0.35f) : c, "VECTORTRON", W / 2.0f + k * 12, 3250 - k * 12, 300,
-             VP_TEXT_CENTER);
-    }
-    text(d, mkrgb(255, 255, 255), "2084", W / 2.0f, 2900, 160, VP_TEXT_CENTER);
+    /* the logo: the marquee's lettering, VECTORTRON over 2084 */
+    logo_draw(d, W / 2.0f, 3150, 330, t);
 
     /* a family walking on a turntable */
     model_pose p;
@@ -536,6 +528,6 @@ int main(int argc, char **argv)
     desc.draw = draw;
     desc.shutdown = shutdown;
     desc.update_hz = 60;
-    desc.frame_hz = 40;             /* the picture, on the board too (the logic runs at 60) */
+    desc.frame_hz = 60;             /* the picture, on the board too, as the logic */
     return vp_run(&desc, argc, argv);
 }
