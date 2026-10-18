@@ -135,6 +135,15 @@ Vectortron, geholt von https://github.com/endprodukt/vectortron (Branch
   Abschüssen ist raus; beim Tod des Spielers bleibt es (6). Der Wandblitz in
   der Laserfarbe bleibt, wie im Original (LFLASH).
 
+- Verteilung: das Paket `vectortron-0.1.0.vpk` liegt im Google-Drive-Ordner
+  `games` (geteilt mit Mario Montminy); beim Hochladen ersetzt Drive die alte
+  Datei gleichen Namens durch eine neue Version („Replace existing file“).
+  Hochladen vom PC aus: in Chrome auf drive.google.com, Ordner `games`, New
+  → File upload (die Sitzung hat das Dateifeld per Skript abgefangen, weil
+  der Windows-Dateidialog nicht bedienbar ist). Der Automat war am
+  2026-10-18 abends nicht erreichbar (aus); das neue Programm (ohne
+  Kamerawackeln, Logo, 60 Hz) liegt noch nicht dort.
+
 ## Behobene Fehler
 
 - MAME 0.289 nennt die Sound-ROM `video_sound_rom_3_std_767.ic12`; das Spiel
