@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.21)
 
-project(vectortron VERSION 0.1.0 LANGUAGES C CXX)
+project(vectortron VERSION 0.1.1 LANGUAGES C CXX)
 
 # Vectortron: a 3D vector tribute to Robotron: 2084 for VectorPie.
 #
@@ -69,6 +69,7 @@ add_executable(vectortron
     src/williams.c
     src/romzip.c
     src/bind.c
+    src/vpbind.c
     src/service.c
     src/screen.c
     src/logo.c
@@ -126,7 +127,7 @@ endif()
 
 # vt-sim: the rules without a screen, played by the demo player (a test).
 add_executable(vt-sim tests/sim.c src/game.c src/waves.c src/demo.c src/render.c src/models.c
-               src/font3d.c src/sound.c src/williams.c src/romzip.c src/controls.c src/bind.c)
+               src/font3d.c src/sound.c src/williams.c src/romzip.c src/controls.c src/bind.c src/vpbind.c)
 vp_program(vt-sim)
 if(UNIX)
     target_link_libraries(vt-sim PRIVATE m)

@@ -1,8 +1,16 @@
 /* bind.h — the game's actions and what triggers them.
  *
- * Every action follows the cabinet's advmame.rc (the VectorPie way) until
- * the owner binds it otherwise in the service menu: up to two inputs each,
- * any key, joystick button, joystick axis direction or hat direction.
+ * Read directly, never by advmame.rc's names. Every action is AUTO (what
+ * AdvanceMAME gives it by default: its keys, the sticks, buttons, the
+ * mouse's buttons), NONE, or up to BIND_SLOTS inputs of the owner's (the
+ * service menu, CONTROLS): any key, joystick button, axis direction, hat
+ * direction or mouse button. One input may do several things.
+ *
+ * Laying one out, as in every vector game of this cabinet: START 1 or
+ * Enter on its line, then the input; the first since the cursor came to
+ * the line replaces what it had, every further one is added. While it
+ * waits: Enter (START 1 too on a line of the game's) leaves it as it was,
+ * START 2 makes it NONE, Delete AUTO.
  */
 #ifndef VT_BIND_H
 #define VT_BIND_H
@@ -22,7 +30,7 @@ typedef enum {
     ACT_COUNT
 } action;
 
-#define BIND_SLOTS 2
+#define BIND_SLOTS 4
 
 void bind_init(void);
 /* Once per step, after the SDK has read the controls. */
@@ -32,26 +40,31 @@ int  act_held(action a);
 int  act_pressed(action a);         /* down since the last step */
 
 const char *act_name(action a);     /* "FIRE UP" */
-/* What a slot is bound to: "KEY SPACE", "JOY 1 BUTTON 3", "JOY 1 AXIS 2 +",
- * "JOY 1 HAT UP", or "-" (slot 0 unbound: "CABINET"). */
-void bind_describe(action a, int slot, char *buf, size_t size);
+/* What an action is bound to, in one text: "AUTO", "NONE", "SPACE",
+ * "SPACE + JOY1 BUTTON 3". */
+void bind_describe(action a, char *buf, size_t size);
+int  bind_is_bound(action a);       /* 0: AUTO or NONE */
 
-/* Binding from the menu: start waiting for an input for (a, slot); then
- * call bind_capture() each step: 0 still waiting, 1 bound, -1 gave up
- * (5 seconds). Inputs held when it starts are ignored until released. */
-void bind_capture_begin(action a, int slot);
+/* Laying out from the menu: start waiting for an input for the action
+ * (`replace`: it replaces what the action had, else it is added); then
+ * call bind_capture() each step: 0 still waiting, 1 changed, -1 left as
+ * it was. Inputs held when it starts are ignored until released. */
+void bind_capture_begin(action a, int replace);
 int  bind_capture(void);
-void bind_clear(action a);          /* back to the cabinet's */
+int  bind_capturing(void);
+int  bind_capture_adds(void);       /* waiting, and what comes is added */
+void bind_clear(action a);          /* AUTO */
+void bind_set_none(action a);       /* NONE */
+void bind_toggle(action a);         /* NONE, or AUTO again */
 void bind_clear_all(void);
 
-/* The settings file: "bind_<action> = <input>[, <input>]". */
+/* The settings file: "bind_<action> = auto | off | <input>[, <input>...]". */
 int  bind_parse(const char *key, const char *value);
 void bind_save(FILE *f);
 
-/* The service menu's own keys: the bound actions, and always the arrow
- * keys, Return, Backspace, F2 and the first joystick's stick, hat and
- * buttons 1 / 2, so that no binding can lock the owner out. Up, down, left
- * and right repeat while held. */
+/* The service menu's own keys, whatever is bound: the arrow keys, any
+ * stick or hat, START 1 / Enter / the keypad's Enter, Backspace, and F2 or
+ * the service button. Up, down, left and right repeat while held. */
 typedef struct { int up, down, left, right, ok, back, service; } menu_keys;
 void bind_menu(menu_keys *m);
 

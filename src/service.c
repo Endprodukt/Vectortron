@@ -6,6 +6,9 @@
 #include <string.h>
 
 #include "bind.h"
+#include "vpbind.h"
+
+#include <SDL.h>
 #include "models.h"
 #include "render.h"
 #include "settings.h"
@@ -19,7 +22,7 @@ static struct {
     int active;
     int page;
     int sel[PG_COUNT];
-    int col;                /* controls: 0 slot 1, 1 slot 2, 2 clear */
+    int adding;             /* controls: the line (+1) that had an input laid out since the cursor came: the next is added */
     int capturing;
     int confirm;            /* the item waiting for a second press */
     int sound;              /* the sound test's sound */
@@ -116,10 +119,7 @@ int service_update(vp_game *g)
 
     if (S.capturing) {
         int r = bind_capture();
-        if (r != 0) {
-            S.capturing = 0;
-            note(r > 0 ? "BOUND" : "NOTHING PRESSED - UNCHANGED");
-        }
+        if (r != 0) S.capturing = 0;
         return 0;
     }
 
@@ -136,8 +136,8 @@ int service_update(vp_game *g)
         return 0;
     }
 
-    if (k.up)   { *sel = (*sel + n - 1) % n; S.confirm = -1; }
-    if (k.down) { *sel = (*sel + 1) % n; S.confirm = -1; }
+    if (k.up)   { *sel = (*sel + n - 1) % n; S.confirm = -1; S.adding = 0; }
+    if (k.down) { *sel = (*sel + 1) % n; S.confirm = -1; S.adding = 0; }
     int d = k.right - k.left;
 
     switch (S.page) {
@@ -192,19 +192,26 @@ int service_update(vp_game *g)
         if (k.back) S.page = PG_MAIN;
         break;
     case PG_CONTROLS:
-        if (d) S.col = clampi(S.col + d, 0, 2);
+        /* As in every vector game of this cabinet (bind.h): START / Enter,
+         * then the input - the first since the cursor came replaces, every
+         * further one is added; left / right NONE or AUTO; Delete AUTO. */
+        if (*sel < ACT_COUNT) {
+            if (d) { bind_toggle((action)*sel); S.adding = 0; }
+            if (vpb_key_pressed(SDL_SCANCODE_DELETE) || vpb_key_pressed(SDL_SCANCODE_KP_PERIOD)) { bind_clear((action)*sel); S.adding = 0; }
+        }
         if (k.ok) {
             if (*sel < ACT_COUNT) {
-                if (S.col == 2) { bind_clear((action)*sel); note("BACK TO THE CABINET'S"); }
-                else { bind_capture_begin((action)*sel, S.col); S.capturing = 1; }
+                bind_capture_begin((action)*sel, S.adding != *sel + 1);
+                S.adding = *sel + 1;
+                S.capturing = 1;
             } else if (*sel == ACT_COUNT) {
-                if (S.confirm == 100) { bind_clear_all(); note("ALL CONTROLS AS THE CABINET'S"); S.confirm = -1; }
-                else { S.confirm = 100; note("PRESS AGAIN TO RESET ALL CONTROLS"); }
+                if (S.confirm == 100) { bind_clear_all(); note("ALL CONTROLS AUTO"); S.confirm = -1; }
+                else { S.confirm = 100; note("PRESS AGAIN TO SET ALL CONTROLS AUTO"); }
             } else {
                 S.page = PG_MAIN;
             }
         }
-        if (k.back) S.page = PG_MAIN;
+        if (k.back) { S.page = PG_MAIN; S.adding = 0; }
         break;
     case PG_SOUND:
         if (*sel == SD_VOLUME && d) { SET.volume = clampi(SET.volume + d, 0, 10); game_apply_settings(); }
@@ -302,30 +309,29 @@ void service_draw(vp_dvg *d, double t)
     case PG_CONTROLS: {
         text(d, mkrgb(255, 60, 60), "CONTROLS", W / 2.0f, 3800, 150, VP_TEXT_CENTER);
         const float ch = 70, cs = 170;
-        float yy = 3560;
-        static const char *const COLS[3] = { "INPUT 1", "INPUT 2", "CLEAR" };
-        static const float CX[3] = { 1350, 2450, 3550 };
-        for (int c = 0; c < 3; c++)
-            text(d, c == S.col ? mkrgb(255, 255, 0) : mkrgb(120, 120, 160), COLS[c], CX[c], yy + 40, 60, VP_TEXT_LEFT);
-        yy -= cs;
+        float yy = 3560 - cs;
         for (int a = 0; a < ACT_COUNT; a++, yy -= cs) {
             int on = a == sel;
             rgb lc = on ? mkrgb(255, 255, 0) : (act_held((action)a) ? mkrgb(60, 255, 60) : mkrgb(170, 170, 200));
+            char b[160];
             text(d, lc, act_name((action)a), 250, yy, ch, VP_TEXT_LEFT);
-            for (int sl = 0; sl < 2; sl++) {
-                char b[48];
-                bind_describe((action)a, sl, b, sizeof b);
-                rgb vc = on && S.col == sl ? mkrgb(255, 255, 255) : mkrgb(120, 200, 255);
-                if (S.capturing && on && S.col == sl && ((int)(t * 4) & 1)) snprintf(b, sizeof b, "PRESS ...");
-                text(d, vc, b, CX[sl], yy, ch * 0.85f, VP_TEXT_LEFT);
-            }
-            if (on && S.col == 2) text(d, mkrgb(255, 255, 255), "CLEAR", CX[2], yy, ch * 0.85f, VP_TEXT_LEFT);
+            bind_describe((action)a, b, sizeof b);
+            if (S.capturing && on) snprintf(b, sizeof b, "%s", ((int)(t * 4) & 1) ? "PRESS THE BUTTON" : "");
+            /* all of them; smaller when they would not fit */
+            float h = ch * 0.85f, room = 3850.0f - 1500.0f;
+            if ((float)strlen(b) * h * 0.95f > room) h = room / ((float)strlen(b) * 0.95f);
+            text(d, on ? mkrgb(255, 255, 255) : mkrgb(120, 200, 255), b, 1500, yy, h, VP_TEXT_LEFT);
         }
-        line_item(d, ACT_COUNT, sel, "RESET ALL TO THE CABINET", NULL, yy - 20, ch);
+        line_item(d, ACT_COUNT, sel, "ALL CONTROLS AUTO", NULL, yy - 20, ch);
         line_item(d, ACT_COUNT + 1, sel, "BACK", NULL, yy - 20 - cs, ch);
-        if (S.capturing) {
-            snprintf(v, sizeof v, "PRESS AN INPUT FOR %s", act_name((action)sel));
-            text(d, mkrgb(255, 255, 0), v, W / 2.0f, 230, 80, VP_TEXT_CENTER);
+        {
+            const char *one = "LEFT RIGHT - AUTO OR NONE   DEL - AUTO", *two = "START, ENTER - ADD BUTTON   BACKSPACE - BACK";
+            if (S.capturing) {
+                one = bind_capture_adds() ? "PRESS THE BUTTON TO ADD" : "PRESS THE BUTTON";
+                two = "START 1 - BACK  DEL - AUTO  START 2 - NONE";
+            }
+            text(d, mkrgb(255, 255, 0), one, W / 2.0f, 330, 70, VP_TEXT_CENTER);
+            text(d, mkrgb(255, 255, 0), two, W / 2.0f, 210, 70, VP_TEXT_CENTER);
         }
         break;
     }
@@ -355,8 +361,8 @@ void service_draw(vp_dvg *d, double t)
         break;
     }
     }
-    if (S.page != PG_INPUT && !S.capturing)
-        text(d, mkrgb(120, 120, 160), "UP DOWN SELECT   LEFT RIGHT CHANGE   FIRE OK   STRAFE BACK",
+    if (S.page != PG_INPUT && S.page != PG_CONTROLS)
+        text(d, mkrgb(120, 120, 160), "UP DOWN SELECT   LEFT RIGHT CHANGE   START OR ENTER OK   BACKSPACE BACK",
              W / 2.0f, 110, 60, VP_TEXT_CENTER);
     if (S.message_time > 0) text(d, mkrgb(255, 255, 255), S.message, W / 2.0f, 340, 80, VP_TEXT_CENTER);
 }

@@ -168,3 +168,10 @@ Vectortron, geholt von https://github.com/endprodukt/vectortron (Branch
   selbst nicht gemessen (`VP_STATS=1` über `run.sh`, nur mit Erlaubnis).
 - `vt-sounds` schreibt die WAVs in voller Aussteuerung; als Ersatz nach
   `assets/sounds/` gelegt wären sie wieder so laut wie vorher.
+
+## Belegung wie bei allen Vektorspielen (2026-10-19)
+
+- `src/bind.c` neu (aus Star Wars Enhanced abgeleitet): jede Aktion AUTO (direkt gelesen: AdvanceMAME-Standards – Pfeile/Stick 1 zum Bewegen, R/F/D/G/Stick 2 zum Schießen, Left Ctrl/Left Alt/Space + Stick-Knöpfe + Maustasten, 1/2/5/6), NONE oder bis zu 4 eigene Eingaben. Datei: `auto`, `off`, sonst `key:..`; ein altes `none` heißt AUTO.
+- CONTROLS-Seite: eine Zeile je Aktion statt zwei Spalten. START 1/Enter, dann ein Knopf; der erste seit der Cursor auf der Zeile steht ersetzt, jeder weitere fügt hinzu. Während des Wartens: Enter (bei Spielfunktionen auch START 1) zurück, START 2 NONE, Entf AUTO; Links/Rechts NONE/AUTO; Entf auf der Zeile AUTO. Kein 5-Sekunden-Abbruch. Eine Taste darf mehrere Aktionen haben.
+- Das Service-Menü geht nur über feste Eingaben (`src/vpbind.[ch]`, Kopie aus dem Tempest-2000-Port): Pfeile, jeder Stick/Hat, START 1/Enter/Keypad-Enter, Rücktaste zurück, F2/Service-Knopf. Feuer/Strafe wirken im Menü nicht mehr. (Das Öffnen mit Knopf 2 + 3 gehalten im Attract bleibt, ist Spielbelegung.)
+- Am PC geprüft (ersetzen, hinzufügen, NONE/AUTO), Pi-Build am Automaten installiert (alte Datei `vectortron.before-vpbind`), dort nicht ausprobiert.
