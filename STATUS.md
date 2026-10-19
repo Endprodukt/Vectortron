@@ -175,3 +175,5 @@ Vectortron, geholt von https://github.com/endprodukt/vectortron (Branch
 - CONTROLS-Seite: eine Zeile je Aktion statt zwei Spalten. START 1/Enter, dann ein Knopf; der erste seit der Cursor auf der Zeile steht ersetzt, jeder weitere fügt hinzu. Während des Wartens: Enter (bei Spielfunktionen auch START 1) zurück, START 2 NONE, Entf AUTO; Links/Rechts NONE/AUTO; Entf auf der Zeile AUTO. Kein 5-Sekunden-Abbruch. Eine Taste darf mehrere Aktionen haben.
 - Das Service-Menü geht nur über feste Eingaben (`src/vpbind.[ch]`, Kopie aus dem Tempest-2000-Port): Pfeile, jeder Stick/Hat, START 1/Enter/Keypad-Enter, Rücktaste zurück, F2/Service-Knopf. Feuer/Strafe wirken im Menü nicht mehr. (Das Öffnen mit Knopf 2 + 3 gehalten im Attract bleibt, ist Spielbelegung.)
 - Am PC geprüft (ersetzen, hinzufügen, NONE/AUTO), Pi-Build am Automaten installiert (alte Datei `vectortron.before-vpbind`), dort nicht ausprobiert.
+
+GitHub-Release (2026-10-19): `v0.1.1` mit demselben Paket wie im Google-Drive-Ordner `games`. Bei jedem neuen Paket im Drive auch ein Release anlegen (`gh release create v<version> <paket>.vpk`).
