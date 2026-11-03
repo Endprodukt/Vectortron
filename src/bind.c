@@ -81,6 +81,7 @@ static struct {
 } CAP;
 
 static int any_now, any_before;
+static int settle;                      /* a capture has just ended: what is still held is not the menu's until let go */
 
 static void open_joysticks(void)
 {
@@ -235,6 +236,11 @@ void bind_capture_begin(action a, int replace)
     snapshot();                         /* what is held now counts once it is let go */
 }
 
+/* Over, however it ended: what is still held (the arrow key just laid
+ * out, the Enter that left it) is not the menu's until it has been let
+ * go - the menu and the game are independent, as in every vector game. */
+static void capture_end(void) { CAP.active = 0; settle = 1; }
+
 int bind_capturing(void) { return CAP.active; }
 int bind_capture_adds(void) { return CAP.active && !CAP.replace; }
 
@@ -277,11 +283,11 @@ int bind_capture(void)
      * START 2 makes it NONE, Delete AUTO. */
     if (vpb_key_pressed(SDL_SCANCODE_RETURN) || vpb_key_pressed(SDL_SCANCODE_KP_ENTER) || vpb_key_pressed(SDL_SCANCODE_ESCAPE)
         || (!cabinet_line(a) && g_in && vp_input_pressed(g_in, "start1"))) {
-        CAP.active = 0;
+        capture_end();
         return -1;
     }
-    if (!cabinet_line(a) && g_in && vp_input_pressed(g_in, "start2")) { bind_set_none(a); CAP.active = 0; return 1; }
-    if (vpb_key_pressed(SDL_SCANCODE_DELETE) || vpb_key_pressed(SDL_SCANCODE_KP_PERIOD)) { bind_clear(a); CAP.active = 0; return 1; }
+    if (!cabinet_line(a) && g_in && vp_input_pressed(g_in, "start2")) { bind_set_none(a); capture_end(); return 1; }
+    if (vpb_key_pressed(SDL_SCANCODE_DELETE) || vpb_key_pressed(SDL_SCANCODE_KP_PERIOD)) { bind_clear(a); capture_end(); return 1; }
 
     input got = { IN_NONE, 0, 0, 0 };
     for (int i = 1; i < nk && i < SDL_NUM_SCANCODES && got.type == IN_NONE; i++) {
@@ -318,7 +324,7 @@ int bind_capture(void)
     }
     if (got.type == IN_NONE) return 0;
     take(got);
-    CAP.active = 0;
+    capture_end();
     /* the input just bound must not also count as a press this frame */
     held_now[a] = held_before[a] = 1;
     return 1;
@@ -428,6 +434,15 @@ void bind_menu(menu_keys *m)
     now[5] = vpb_key_held(SDL_SCANCODE_BACKSPACE);
     now[6] = act_held(ACT_SERVICE) || vpb_key_held(SDL_SCANCODE_F2);
     int *out[7] = { &m->up, &m->down, &m->left, &m->right, &m->ok, &m->back, &m->service };
+    if (settle) {
+        /* a capture has just ended: nothing counts, and nothing repeats,
+         * until everything held then is let go (else the arrow key just
+         * laid out would toggle its own line NONE / AUTO at once) */
+        settle = 0;
+        for (int i = 0; i < 7; i++) { settle |= now[i]; prev[i] = now[i]; *out[i] = 0; }
+        memset(hold, 0, sizeof hold);
+        return;
+    }
     for (int i = 0; i < 7; i++) {
         int fire = now[i] && !prev[i];
         if (i < 4) {
