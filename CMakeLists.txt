@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.21)
 
-project(vectortron VERSION 0.1.1 LANGUAGES C CXX)
+project(vectortron VERSION 0.1.2 LANGUAGES C CXX)
 
 # Vectortron: a 3D vector tribute to Robotron: 2084 for VectorPie.
 #
