@@ -1,180 +1,236 @@
-# Stand
+# Status
 
-Vectortron, geholt von https://github.com/endprodukt/vectortron (Branch
-`ccr-9894316f-dbxip2`, Stand `e455e0a`), lokal in `F:\Vectorton`.
+Vectortron, taken from https://github.com/endprodukt/vectortron (branch
+`ccr-9894316f-dbxip2`, at `e455e0a`), locally in `F:\Vectorton`.
 
-## Erledigt (2026-10-16)
+## 0.1.3: SDK 0.9.0 and the cabinet's volumes (2026-11-10)
 
-- Sound-ROM aus dem MAME-Set `D:\Mame\roms\robotron.zip` geholt:
-  `video_sound_rom_3_std_767.ic12` liegt als `assets/video_sound_rom_1.ic12`
-  im Projekt (von git ignoriert, nicht Teil des Projekts).
-- Alle 31 Originalgeräusche mit `vt-sounds` als WAV geschrieben:
-  `sounds/original/*.wav` (5,7 MB, von git ignoriert).
-- PC-Build (MSYS2) und Pi-Build (clang, ohne WSL) laufen, `ctest` 3/3 bestanden.
-- Paket `build/pi/vectortron-0.1.0.vpk` (Programm, `game.ini`, `leds.cfg`,
-  Marquee, `assets/` mit der Sound-ROM) auf dem Automaten:
-  `/persistent/games/packages/vectortron-0.1.0.vpk` und ausgepackt nach
-  `/persistent/games/vectortron/` (mit leerem `save/`), md5 geprüft.
-  Das Menü zeigt es ohne Neustart; am Automaten aus dem Menü gestartet,
-  läuft auf dem USB-DVG mit Ton (`launch.log`). `pkg/run.sh` liegt dort als
-  `run.sh` (Start vom PC aus, wie bei Red Baron).
+- Built against VectorPie SDK 0.9.0 (Goldfinch2/VectorPie `b00d537`, menu
+  1.1.13) instead of 0.1.0. The SDK is a clone in `external/VectorPie`
+  (ignored by git), which `CMakeLists.txt` picks up by itself; the old
+  vendored copy in the Tempest 2000 port is no longer used. PC build and Pi
+  build unchanged otherwise (the SDK's new physics engine and Ogg decoder
+  compile with both toolchains; the Pi build's 94 warnings are all in the
+  SDK's Hershey font table).
+- Its new audio option: every SDK game follows the cabinet menu's SOUND
+  VOLUME and MUSIC VOLUME (`/usr/local/share/advance/vector_pie_menu.cfg`,
+  `[audio]` `effects_volume`, `music_volume`). Vectortron plays every sound
+  as an SDK effect, so the cabinet's SOUND VOLUME now applies on top of the
+  game's VOLUME without any change to the sound code. The SOUND page shows
+  that level (`CABINET SOUND VOLUME nn - VECTORPIE MENU`, read from the same
+  file the SDK reads; nothing on a PC). `ROM_GAIN` 0.3 stays: if the cabinet
+  is now too quiet, raise VOLUME (up to 10 = full) or the menu's SOUND
+  VOLUME.
+- Replacement sounds may be Ogg Vorbis as well as WAV (`assets/sounds/
+  <name>.ogg`); the game already tried `.ogg`, the old SDK refused it.
+- `README.md`, `RESUME.md` and this file in English.
+- Not yet played on the cabinet.
 
-- Zweite Runde (nach dem ersten Spiel am Automaten, `launch.log`: Originalgeräusche
-  aus der ROM):
-  - Lautstärke: die ROM-Aufnahmen werden mit `ROM_GAIN` 0.3 (rund -10 dB)
-    abgespielt; vorher lief der DAC in voller Aussteuerung („brutal laut“).
-  - Highscore-Musik wie im Original (RRTESTC.ASM, GETHIM): `HSTUNE` ($1B, $02,
-    rund 10 s) bei einem Platz in der Liste, `ULTUNE` (Fliegeralarm, 18 s) für
-    Platz 1; mit `SNDLDS` gesendet, also ohne Rücksicht auf die Priorität.
-    Neue Klänge `hiscore` und `hiscore_top`.
-  - Flimmern: Bildrate auf dem Board jetzt einstellbar (DISPLAY → REFRESH ON
-    THE BOARD, 30–60 Hz, ab Werk 40 statt bisher fest 30), wirkt beim
-    nächsten Start (`refresh` in `save/settings.txt`).
-  - Neues Paket auf dem Automaten, Programm per Umbenennen ersetzt, `save/`
-    unberührt. Noch nicht auf dem Automaten gespielt.
+## Done (2026-10-16)
 
-- Dritte Runde (Besitzer: Highscore-Musik läuft, Bild flimmert bei voller Arena):
-  - Schuss: eine Linie in der Laserfarbe der Welle statt 10 Linien und
-    Funkenspur.
-  - HUD fest an der hinteren Wand (Punkte links, WAVE und MEN rechts), läuft
-    nicht mehr mit der Kamera mit; Leben als Zahl (`MEN 2`) statt
-    3D-Männchen. Mit der Robotron-X-Kamera ist SCORE links oben angeschnitten.
-  - Messung am PC (Welle 9, Kamera Arena, Demo-Spieler, `VP_STATS=1`), je
-    Bild: vorher rund 2.100 Linien / 700 Leerwege, jetzt rund 1.300 / 500
-    (mit 9 Leben gemessen: 7 Männchen weniger). Boden-Gitter: rund 48.000
-    der 110.000 Einheiten Linienlänge. Effekte FULL: Leerweg 90.000 → 140.000.
-  - Auf den Automaten kopiert, dort noch nicht gespielt.
-- Vierte Runde: Boden-Gitter 5 x 4 Felder statt 10 x 8 (die Kacheln bleiben
-  10 x 8); Effekte: halb so viele Trümmer und Funken je Abschuss, Funken
-  kürzer, Bodenring nur bei großen Gegnern (size >= 14), Ringe mit 10/14
-  statt 14/20 Segmenten, Mündungsfeuer 2 statt 3 und Wandtreffer 4 statt 8
-  Funken, höchstens 300 statt 700 Teilchen zugleich. Messung (Welle 9, Gitter,
-  FULL): Linienlänge 113.000 → 82.000, Leerweg 146.000 → 110.000, Linien
-  1.330 → 1.240. Auf den Automaten kopiert (dort steht `floor = 2`, kein
-  Boden: das Gitter wirkt dort erst, wenn es eingestellt wird).
-- Fünfte Runde, die Modelle abgespeckt (Sicherung der schönen Fassung:
-  `backup/models-original-2026-10-16.c`): Füße und Hände sind eigene
-  DETAIL-Teile und werden wie Visiere und Haare nur näher als 190 Einheiten
-  an der Kamera gezeichnet (Robotron-X-Kamera nah; mit der Arena-Kamera nie).
-  Hüfte und Rumpf des Grunts, Gürtel und Brust des Hulks, Hose und Hemd von
-  Mikey, Kleid und Mieder von Mommy je ein Körper; Gehirn des Brains und
-  Enforcer sechs- statt achtseitig, Spheroid-Ringe 10 statt 14 Segmente,
-  Stern-Elektrode sechs- statt achtzackig, Gesicht des Tanks DETAIL, seitliche
-  Haare des Spielers DETAIL. Messung (Welle 9, Gitter, FULL): Linien 1.240 →
-  950, Linienlänge 82.000 → 78.000, Leerweg 110.000 → 107.000. Insgesamt
-  heute: Linien 2.200 → 950. Auf dem Automaten, dort noch nicht gespielt.
-- Sechste Runde:
-  - Servicemenü auch im Spiel: SERVICE/F2 hält das Spiel an und öffnet es;
-    BACK/EXIT führt ins angehaltene Spiel zurück (`G.service_from`). Die
-    Tastenkombination 2 + 3 bleibt dem Attract-Modus vorbehalten (im Spiel
-    sind das Strafe und Kamera).
-  - Modelle: Spheroid 2 Ringe à 8 statt 3 à 10, Kern DETAIL; Enforcer rotes
-    Band DETAIL; Quark grüne X-Linien DETAIL; Tank Luke DETAIL; Hulk
-    Antennenknopf DETAIL; Schneeflocke und „2084“ nur noch auf der Vorderseite
-    (Elektroden schauen immer zur Kamera). Banner-Echos (WAVE, WAVE CLEARED,
-    EXTRA MAN): 2 bei FULL, 1 bei LIGHT, 0 bei OFF (vorher immer 3).
-  - Messung Welle 9 (Gitter, FULL): 950 → 770 Linien. **Wellenstart Welle 13**
-    (35 Grunts, 8 Hulks, 25 Elektroden, 5 Spheroids): rund 2.900 Linien und
-    170.000 Einheiten Linienlänge – das ist der Fall, in dem der Monitor
-    flimmert; nach 10 s sind es rund 1.200.
-  - Auf dem Automaten, dort noch nicht gespielt.
-- Siebte Runde (Besitzer: 60 Hz fest, Boden raus, noch mehr sparen):
-  - 60 Hz fest, auch auf dem Board (`frame_hz = 60`); die Einstellung
-    `refresh` ist weg.
-  - Kein Boden mehr, weder Kacheln noch Gitter; die Einstellung `floor` und
-    die Menüzeile FLOOR sind weg (alte Einträge in `settings.txt` werden
-    ignoriert). Die Bodenfarbe der Wellen (`stage.floor`) ist jetzt ungenutzt.
-  - Elektroden sind flache Umrisse (Drahtmodell) statt Platten mit Dicke:
-    ein Quadrat 4 statt rund 9 Linien, bei 25 je Welle.
-  - Das Wort SCORE ist weg (nur die Zahl, wie im Original); Materialisieren
-    streckt auf 3,5-fach statt 6-fach (die Linienlänge am Wellenstart);
-    2 statt 3 Ringe beim Wellenstart.
-  - Messung Wellenstart Welle 13 (noch mit Gitter): 2.900 → 2.700 Linien,
-    Linienlänge 170.000 → 150.000. Auf dem Automaten, dort noch nicht gespielt.
-  - Marquee: das Bild des Besitzers (Williams-Stil, VECTORTRON 2084,
-    2000 x 449) ist `pkg/marquee.png`; das alte liegt in
-    `backup/marquee-old-2026-10-16.png`. Auf dem Automaten im Spielordner und
-    als `artwork/marquees/vectortron.png` fürs Menü.
+- Sound ROM taken from the MAME set `D:\Mame\roms\robotron.zip`:
+  `video_sound_rom_3_std_767.ic12` lies as `assets/video_sound_rom_1.ic12`
+  in the project (ignored by git, not part of the project).
+- All 31 original sounds written as WAV with `vt-sounds`:
+  `sounds/original/*.wav` (5.7 MB, ignored by git).
+- PC build (MSYS2) and Pi build (clang, without WSL) run, `ctest` 3/3 passed.
+- Package `build/pi/vectortron-0.1.0.vpk` (program, `game.ini`, `leds.cfg`,
+  marquee, `assets/` with the sound ROM) on the cabinet:
+  `/persistent/games/packages/vectortron-0.1.0.vpk`, unpacked into
+  `/persistent/games/vectortron/` (with an empty `save/`), md5 checked.
+  The menu shows it without a restart; started from the menu on the
+  cabinet, it runs on the USB-DVG with sound (`launch.log`). `pkg/run.sh`
+  lies there as `run.sh` (a start from the PC, as with Red Baron).
 
-- GAME OVER wie die Banner: Hauptschrift rot, dahinter Echos in wechselnden
-  Farben (`render_big_text`, von den Bannern abgetrennt; Echos je nach
-  EFFECTS 2/1/0). Auf dem Automaten.
+- Second round (after the first game on the cabinet, `launch.log`: the
+  original sounds from the ROM):
+  - Volume: the ROM recordings play at `ROM_GAIN` 0.3 (about -10 dB);
+    before, the DAC ran at full scale ("brutally loud").
+  - High score music as in the original (RRTESTC.ASM, GETHIM): `HSTUNE`
+    ($1B, $02, about 10 s) for a place in the table, `ULTUNE` (the air raid,
+    18 s) for first place; sent with `SNDLDS`, so regardless of priority.
+    New sounds `hiscore` and `hiscore_top`.
+  - Flicker: the frame rate on the board became adjustable (DISPLAY →
+    REFRESH ON THE BOARD, 30–60 Hz, 40 by default instead of a fixed 30),
+    taking effect at the next start (`refresh` in `save/settings.txt`).
+  - New package on the cabinet, the program replaced by renaming, `save/`
+    untouched. Not yet played on the cabinet.
 
-- Achte Runde: die Aufsätze flach statt als Kästen (`add_plate`, 4 statt 12
-  Kanten): Visier und Brustplatte des Grunts, Visier des Hulks, Augen des
-  Spielers, Krawatte von Daddy, Mützenschirm von Mikey, Gesicht des Tanks.
-  Alles DETAIL-Teile, also nur nah an der Kamera (Robotron-X-Kamera)
-  gezeichnet; mit der Arena-Kamera ändert sich nichts. Auf dem Automaten.
+- Third round (owner: the high score music plays, the picture flickers with
+  a full arena):
+  - The shot: one line in the wave's laser color instead of 10 lines and a
+    spark trail.
+  - The HUD fixed to the far wall (score left, WAVE and MEN right), no
+    longer moving with the camera; lives as a number (`MEN 2`) instead of
+    3D men. With the Robotron X camera SCORE is cut off at the top left.
+  - Measured on the PC (wave 9, arena camera, demo player, `VP_STATS=1`),
+    per frame: before about 2,100 lines / 700 blank moves, now about 1,300
+    / 500 (measured with 9 lives: 7 men fewer). Floor grid: about 48,000 of
+    the 110,000 units of line length. Effects FULL: blank travel 90,000 →
+    140,000.
+  - Copied to the cabinet, not yet played there.
+- Fourth round: floor grid 5 x 4 cells instead of 10 x 8 (the tiles stay
+  10 x 8); effects: half as many fragments and sparks per kill, shorter
+  sparks, the floor ring only for big enemies (size >= 14), rings with
+  10/14 instead of 14/20 segments, muzzle flash 2 instead of 3 and wall hit
+  4 instead of 8 sparks, at most 300 instead of 700 particles at once.
+  Measured (wave 9, grid, FULL): line length 113,000 → 82,000, blank travel
+  146,000 → 110,000, lines 1,330 → 1,240. Copied to the cabinet (`floor = 2`
+  there, no floor: the grid only shows once it is set).
+- Fifth round, the models slimmed down (the full version kept in
+  `backup/models-original-2026-10-16.c`): feet and hands are DETAIL parts of
+  their own and, like visors and hair, are drawn only within 190 units of
+  the camera (the Robotron X camera up close; never with the arena camera).
+  The grunt's hips and torso, the hulk's belt and chest, Mikey's trousers
+  and shirt, Mommy's dress and bodice one body each; the brain's brain and
+  the enforcer six-sided instead of eight-sided, spheroid rings 10 instead
+  of 14 segments, the star electrode six-pointed instead of eight-pointed,
+  the tank's face DETAIL, the player's side hair DETAIL. Measured (wave 9,
+  grid, FULL): lines 1,240 → 950, line length 82,000 → 78,000, blank travel
+  110,000 → 107,000. In all today: lines 2,200 → 950. On the cabinet, not
+  yet played there.
+- Sixth round:
+  - The service menu in a game too: SERVICE/F2 pauses the game and opens
+    it; BACK/EXIT returns to the paused game (`G.service_from`). The 2 + 3
+    chord stays reserved for the attract mode (in a game those are strafe
+    and camera).
+  - Models: spheroid 2 rings of 8 instead of 3 of 10, the core DETAIL;
+    the enforcer's red band DETAIL; the quark's green X lines DETAIL; the
+    tank's hatch DETAIL; the hulk's antenna knob DETAIL; the snowflake and
+    "2084" on the front only (electrodes always face the camera). Banner
+    echoes (WAVE, WAVE CLEARED, EXTRA MAN): 2 at FULL, 1 at LIGHT, 0 at OFF
+    (always 3 before).
+  - Measured wave 9 (grid, FULL): 950 → 770 lines. **Wave start of wave
+    13** (35 grunts, 8 hulks, 25 electrodes, 5 spheroids): about 2,900
+    lines and 170,000 units of line length: the case in which the monitor
+    flickers; after 10 s about 1,200.
+  - On the cabinet, not yet played there.
+- Seventh round (owner: 60 Hz fixed, the floor out, save even more):
+  - 60 Hz fixed, on the board too (`frame_hz = 60`); the `refresh` setting
+    is gone.
+  - No floor any more, neither tiles nor grid; the `floor` setting and the
+    FLOOR menu line are gone (old entries in `settings.txt` are ignored).
+    The waves' floor color (`stage.floor`) is now unused.
+  - Electrodes are flat outlines (wireframe) instead of plates with
+    thickness: a square 4 instead of about 9 lines, at 25 per wave.
+  - The word SCORE is gone (the number only, as in the original);
+    materializing stretches to 3.5 times instead of 6 times (the line
+    length at a wave start); 2 instead of 3 rings at a wave start.
+  - Measured at the start of wave 13 (still with the grid): 2,900 → 2,700
+    lines, line length 170,000 → 150,000. On the cabinet, not yet played
+    there.
+  - Marquee: the owner's picture (Williams style, VECTORTRON 2084,
+    2000 x 449) is `pkg/marquee.png`; the old one lies in
+    `backup/marquee-old-2026-10-16.png`. On the cabinet in the game folder
+    and as `artwork/marquees/vectortron.png` for the menu.
 
-- Neunte Runde: die WAVE-Zeile oben rechts ist weg (das Banner nennt die
-  Welle beim Start); beim Einsammeln der Familie kein Punkte-Pop-up mehr
-  auf dem Feld (die 1000 für Spheroid und Quark bleiben). Auf dem Automaten.
+- GAME OVER like the banners: the main lettering red, echoes in changing
+  colors behind it (`render_big_text`, split off from the banners; echoes
+  by EFFECTS 2/1/0). On the cabinet.
 
-- Elektroden als Sprites: die flachen Umrisse stehen jetzt genau zum Auge
-  gedreht (`model_pose.billboard`: um y gedreht und zum Auge gekippt), nicht
-  mehr nur um y zur Kamera; ein Quadrat ist in jeder Kamera ein Quadrat.
-  Auch das Schrumpfen beim Abschuss. Auf dem Automaten.
+- Eighth round: the attachments flat instead of boxes (`add_plate`, 4
+  instead of 12 edges): the grunt's visor and chest plate, the hulk's
+  visor, the player's eyes, Daddy's tie, Mikey's cap peak, the tank's face.
+  All DETAIL parts, so drawn only near the camera (Robotron X camera);
+  nothing changes with the arena camera. On the cabinet.
 
-- Bild wieder auf 40 Hz (`frame_hz = 40`, Logik 60 Hz), auf Wunsch des
-  Besitzers zum Vergleich. Auf dem Automaten.
+- Ninth round: the WAVE line at the top right is gone (the banner names
+  the wave at its start); no points pop-up on the field when the family is
+  collected (the 1000 for spheroid and quark stay). On the cabinet.
 
-- Titel im Attract-Modus: der Schriftzug des Marquees als Vektoren
-  (`src/logo.c`): VECTORTRON aus klobigen, gerundeten Buchstaben, gelber
-  Umriss um einen roten (die roten Buchstaben mit gelbem Rand des Marquees),
-  darunter 2084 in Gelb mit der Raute als 0 und der spitzen 8. Jede Glyphe
-  sind Konturen auf einem 14 hohen Raster, beim Zeichnen gerundet (3 Punkte je
-  Ecke), die Innenlinie ist die in den Körper verschobene Kontur. Rund 900
-  Linien nur auf der Titelseite. Auf dem Automaten.
+- Electrodes as sprites: the flat outlines now stand turned exactly to the
+  eye (`model_pose.billboard`: turned about y and tilted to the eye), not
+  only turned about y to the camera; a square is a square in every camera.
+  The shrink when shot too. On the cabinet.
 
-- Bild wieder auf 60 Hz.
-- Ein Spieler (Mario) meldet: „Wenn die Barrieren weiß werden, verschiebt
-  sich das Bild ein wenig“ auf seinem CRT. Geprüft: das Aufblitzen der Wand
-  ändert nur die Farbe, nicht die Geometrie; was das Bild verschiebt, ist das
-  Kamerawackeln (`fx_shake`) bei jedem Abschuss (1–2,5 Einheiten, zufällig,
-  abklingend), das zeitlich mit dem Blitz zusammenfällt. Das Wackeln bei
-  Abschüssen ist raus; beim Tod des Spielers bleibt es (6). Der Wandblitz in
-  der Laserfarbe bleibt, wie im Original (LFLASH).
+- The picture back at 40 Hz (`frame_hz = 40`, logic 60 Hz), at the owner's
+  wish, for comparison. On the cabinet.
 
-- Verteilung: das Paket `vectortron-0.1.0.vpk` liegt im Google-Drive-Ordner
-  `games` (geteilt mit Mario Montminy); beim Hochladen ersetzt Drive die alte
-  Datei gleichen Namens durch eine neue Version („Replace existing file“).
-  Hochladen vom PC aus: in Chrome auf drive.google.com, Ordner `games`, New
-  → File upload (die Sitzung hat das Dateifeld per Skript abgefangen, weil
-  der Windows-Dateidialog nicht bedienbar ist). Der Automat war am
-  2026-10-18 abends nicht erreichbar (aus); das neue Programm (ohne
-  Kamerawackeln, Logo, 60 Hz) liegt noch nicht dort.
+- The title in the attract mode: the marquee's lettering as vectors
+  (`src/logo.c`): VECTORTRON in chunky, rounded letters, a yellow outline
+  around a red one (the marquee's red letters with a yellow border), 2084
+  below in yellow with the diamond as the 0 and the pointed 8. Each glyph
+  is contours on a grid 14 high, rounded when drawn (3 points per corner);
+  the inner line is the contour moved into the body. About 900 lines on
+  the title page alone. On the cabinet.
 
-## Behobene Fehler
+- The picture back at 60 Hz.
+- A player (Mario) reports: "when the barriers turn white, the picture
+  shifts a little" on his CRT. Checked: the wall's flash changes only the
+  color, not the geometry; what shifts the picture is the camera shake
+  (`fx_shake`) at every kill (1–2.5 units, random, decaying), which
+  coincides with the flash. The shake on kills is out; on the player's
+  death it stays (6). The wall flash in the laser color stays, as in the
+  original (LFLASH).
 
-- MAME 0.289 nennt die Sound-ROM `video_sound_rom_3_std_767.ic12`; das Spiel
-  und `vt-sounds` kannten nur ältere Namen und hätten sie in der Zip nicht
-  gefunden.
-- `vt-sounds` konnte unter Windows keinen Ordner anlegen (`mkdir -p` über cmd.exe).
-- Das `vpk`-Ziel packte `assets/` nicht mit ein.
-- Mit dem SDK-Stand aus `F:\Tempest 2000 Port\vendor\VectorPie` war
-  `VECTORPIE_PACK` leer; jetzt wird `tools/vp-pack/vp-pack.sh` des SDK-Baums genommen.
-- `vp-pack` lehnte den Doppelpunkt in der Beschreibung in `game.ini` ab.
+- Distribution: the package `vectortron-0.1.0.vpk` lies in the Google
+  Drive folder `games` (shared with Mario Montminy); on upload Drive
+  replaces the old file of the same name with a new version ("Replace
+  existing file"). Uploading from the PC: in Chrome on drive.google.com,
+  folder `games`, New → File upload (the session caught the file field by
+  script, because the Windows file dialog cannot be driven). The cabinet
+  was unreachable (off) on the evening of 2026-10-18; the new program
+  (without camera shake, with the logo, 60 Hz) is not there yet.
 
-## Bekannte Einschränkungen / offen
+## Fixed bugs
 
-- Unter Windows hat das Programm im Paket kein Ausführungsrecht; es wird nach
-  dem Packen von Hand gesetzt (siehe RESUME.md). Gehört in ein Skript.
-- Bei voller Arena flimmerte es auf dem Automaten (Besitzer); nach den
-  Runden 4 bis 7 dort noch nicht geprüft. Der Wellenstart (2.700 Linien) ist
-  der Maßstab; ein Grunt in der Ferne kostet rund 55 Linien (6 Kästen à 9
-  sichtbare Kanten), 35 davon je Welle. Übrige Hebel, alle sichtbar: Arme als
-  DETAIL (rund −650 Linien am Wellenstart), Hulks ohne Arme in der Ferne
-  (rund −150), Beine als ein Kasten in der Ferne (rund −300). Auf dem Board
-  selbst nicht gemessen (`VP_STATS=1` über `run.sh`, nur mit Erlaubnis).
-- `vt-sounds` schreibt die WAVs in voller Aussteuerung; als Ersatz nach
-  `assets/sounds/` gelegt wären sie wieder so laut wie vorher.
+- MAME 0.289 names the sound ROM `video_sound_rom_3_std_767.ic12`; the game
+  and `vt-sounds` knew only older names and would not have found it in the
+  zip.
+- `vt-sounds` could not create a folder on Windows (`mkdir -p` through
+  cmd.exe).
+- The `vpk` target did not pack `assets/`.
+- With the SDK from `F:\Tempest 2000 Port\vendor\VectorPie`, `VECTORPIE_PACK`
+  was empty; now the SDK tree's `tools/vp-pack/vp-pack.sh` is taken (SDK
+  0.9.0 sets it itself).
+- `vp-pack` refused the colon in the description in `game.ini`.
 
-## Belegung wie bei allen Vektorspielen (2026-10-19)
+## Known limitations / open
 
-- `src/bind.c` neu (aus Star Wars Enhanced abgeleitet): jede Aktion AUTO (direkt gelesen: AdvanceMAME-Standards – Pfeile/Stick 1 zum Bewegen, R/F/D/G/Stick 2 zum Schießen, Left Ctrl/Left Alt/Space + Stick-Knöpfe + Maustasten, 1/2/5/6), NONE oder bis zu 4 eigene Eingaben. Datei: `auto`, `off`, sonst `key:..`; ein altes `none` heißt AUTO.
-- CONTROLS-Seite: eine Zeile je Aktion statt zwei Spalten. START 1/Enter, dann ein Knopf; der erste seit der Cursor auf der Zeile steht ersetzt, jeder weitere fügt hinzu. Während des Wartens: Enter (bei Spielfunktionen auch START 1) zurück, START 2 NONE, Entf AUTO; Links/Rechts NONE/AUTO; Entf auf der Zeile AUTO. Kein 5-Sekunden-Abbruch. Eine Taste darf mehrere Aktionen haben.
-- Das Service-Menü geht nur über feste Eingaben (`src/vpbind.[ch]`, Kopie aus dem Tempest-2000-Port): Pfeile, jeder Stick/Hat, START 1/Enter/Keypad-Enter, Rücktaste zurück, F2/Service-Knopf. Feuer/Strafe wirken im Menü nicht mehr. (Das Öffnen mit Knopf 2 + 3 gehalten im Attract bleibt, ist Spielbelegung.)
-- Am PC geprüft (ersetzen, hinzufügen, NONE/AUTO), Pi-Build am Automaten installiert (alte Datei `vectortron.before-vpbind`), dort nicht ausprobiert.
-- Fehler behoben (2026-11-03): Pfeiltasten ließen sich nicht belegen (FIRE LEFT/RIGHT auf Links/Rechts sprang sofort auf NONE bzw. AUTO), weil die gerade belegte Taste noch gehalten war und das Menü sie als sein Links/Rechts nahm. Jetzt wie in vpbind (`let_go`): nach dem Belegen zählt für das Menü nichts, bis alles losgelassen ist (`settle` in `src/bind.c`). Am PC gebaut, im Menü selbst nicht ausprobiert.
+- On Windows the program in the package has no execute permission; it is
+  set by hand after packing (see RESUME.md). Belongs in a script.
+- With a full arena the picture flickered on the cabinet (owner); not
+  checked there after rounds 4 to 7. The wave start (2,700 lines) is the
+  measure; a grunt in the distance costs about 55 lines (6 boxes of 9
+  visible edges), 35 of them per wave. Levers left, all visible: arms as
+  DETAIL (about −650 lines at a wave start), hulks without arms in the
+  distance (about −150), legs as one box in the distance (about −300). Not
+  measured on the board itself (`VP_STATS=1` through `run.sh`, only with
+  permission).
+- `vt-sounds` writes the WAVs at full scale; put into `assets/sounds/` as
+  replacements they would be as loud as before.
 
-GitHub-Release (2026-10-19): `v0.1.1` mit demselben Paket wie im Google-Drive-Ordner `games`. `v0.1.2` (2026-11-03): nur der Pfeiltasten-Fix beim Belegen; Paket `vectortron-0.1.2.vpk`, noch nicht im Drive. Am Automaten installiert (2026-11-03): Paket in `packages/`, nur Programm und `game.ini` ausgepackt, altes Programm als `vectortron.before-0.1.2`; nicht gestartet, Fix dort nicht ausprobiert. Bei jedem neuen Paket im Drive auch ein Release anlegen (`gh release create v<version> <paket>.vpk`).
+## Controls laid out like every vector game (2026-10-19)
+
+- `src/bind.c` new (derived from Star Wars Enhanced): every action AUTO
+  (read directly: AdvanceMAME's defaults – arrows/stick 1 to move,
+  R/F/D/G/stick 2 to fire, Left Ctrl/Left Alt/Space + stick buttons + mouse
+  buttons, 1/2/5/6), NONE or up to 4 inputs of its own. In the file:
+  `auto`, `off`, else `key:..`; an old `none` means AUTO.
+- CONTROLS page: one line per action instead of two columns. START 1/Enter,
+  then a button; the first since the cursor came to the line replaces,
+  every further one adds. While waiting: Enter (for game functions START 1
+  too) back, START 2 NONE, Delete AUTO; left/right NONE/AUTO; Delete on the
+  line AUTO. No 5 second abort. A key may have several actions.
+- The service menu works through fixed inputs only (`src/vpbind.[ch]`, a
+  copy from the Tempest 2000 port): arrows, every stick/hat, START
+  1/Enter/keypad Enter, Backspace back, F2/the service button. Fire/strafe
+  no longer act in the menu. (Opening it with buttons 2 + 3 held in the
+  attract mode stays; that is a game binding.)
+- Checked on the PC (replace, add, NONE/AUTO); the Pi build installed on
+  the cabinet (old file `vectortron.before-vpbind`), not tried there.
+- Bug fixed (2026-11-03): arrow keys could not be laid out (FIRE LEFT/RIGHT
+  on left/right jumped to NONE or AUTO at once), because the key just laid
+  out was still held and the menu took it as its own left/right. Now as in
+  vpbind (`let_go`): after laying out, nothing counts for the menu until
+  everything is let go (`settle` in `src/bind.c`). Built on the PC, not
+  tried in the menu itself.
+
+GitHub release (2026-10-19): `v0.1.1` with the same package as in the
+Google Drive folder `games`. `v0.1.2` (2026-11-03): only the arrow key fix
+when laying out; package `vectortron-0.1.2.vpk`, not in Drive yet.
+Installed on the cabinet (2026-11-03): the package in `packages/`, only
+the program and `game.ini` unpacked, the old program as
+`vectortron.before-0.1.2`; not started, the fix not tried there. For every
+new package in Drive also make a release (`gh release create v<version>
+<package>.vpk`).

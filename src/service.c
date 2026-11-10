@@ -358,6 +358,12 @@ void service_draw(vp_dvg *d, double t)
         text(d, mkrgb(120, 200, 255), snd_original() ? "ORIGINAL SOUNDS FROM THE SOUND ROM"
                                                      : "NO SOUND ROM FOUND - SOUNDS MADE IN CODE",
              W / 2.0f, y, 75, VP_TEXT_CENTER);
+        /* the cabinet's own level, which the SDK applies on top of VOLUME */
+        if (snd_cabinet_volume() >= 0) {
+            y -= 150;
+            snprintf(v, sizeof v, "CABINET SOUND VOLUME %d - VECTORPIE MENU", snd_cabinet_volume());
+            text(d, mkrgb(120, 200, 255), v, W / 2.0f, y, 75, VP_TEXT_CENTER);
+        }
         break;
     }
     }

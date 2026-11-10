@@ -2,12 +2,16 @@
  *
  * The original's sounds, played by an emulated Williams sound board from
  * the owner's own Robotron ROM set; without it, sounds made in code in the
- * same spirit. A file assets/sounds/<name>.wav (or .ogg) next to the
- * executable replaces either: see README.md for the names.
+ * same spirit. A file assets/sounds/<name>.wav or .ogg (Ogg Vorbis) next
+ * to the executable replaces either: see README.md for the names.
  *
  * With the original sounds the board's single voice and its priorities are
  * kept: a sound only cuts in on one of the same priority or lower, as on the
  * cabinet.
+ *
+ * Volume: the game's VOLUME (the service menu) times, on the cabinet, the
+ * VectorPie menu's SOUND VOLUME, which the SDK (0.9.0 or newer) applies to
+ * every SDK game's effects.
  */
 #ifndef VT_SOUND_H
 #define VT_SOUND_H
@@ -58,6 +62,10 @@ typedef enum {
 void snd_init(vp_audio *a);
 /* 1 when the sounds come from the original ROM. */
 int  snd_original(void);
+/* The cabinet's SOUND VOLUME (the VectorPie menu's, 0..100), which the SDK
+ * applies to every sound on top of the game's VOLUME; -1 when there is no
+ * menu (a PC: full). */
+int  snd_cabinet_volume(void);
 /* For tools: the sound's file name, its original command sequence (0 when
  * the original has none), and the sound ROM as snd_init finds it
  * (malloc'ed; NULL if none). */

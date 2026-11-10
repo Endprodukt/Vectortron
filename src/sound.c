@@ -1,4 +1,9 @@
-/* sound.c — the game's sounds, made in code (or loaded, when a file is there). */
+/* sound.c — the game's sounds, made in code (or loaded, when a file is there).
+ *
+ * Every sound goes out as an SDK effect (vp_sound_play). Since SDK 0.9.0 the
+ * SDK mixes effects at the cabinet menu's SOUND VOLUME as well, on top of
+ * the game's own VOLUME (vp_audio_set_master, main.c); the files a sound can
+ * be replaced by are WAV or Ogg Vorbis. */
 #include "sound.h"
 #include "romzip.h"
 #include "williams.h"
@@ -521,9 +526,35 @@ static vp_sound *to_sound(float *buf, int frames)
     return out;
 }
 
+/* ---- the cabinet's own volume --------------------------------------------
+ * The VectorPie menu's SOUND VOLUME (Settings -> AUDIO) applies to every SDK
+ * game's effects since SDK 0.9.0: the SDK reads it from the menu's settings
+ * when the audio opens and mixes at that level on top of the game's VOLUME.
+ * Read here too, the same way, only to show it on the SOUND page. */
+#define MENU_CONFIG "/usr/local/share/advance/vector_pie_menu.cfg"
+static int cabinet_volume = -1;     /* 0..100, or -1: no menu (a PC) */
+
+static void read_cabinet_volume(void)
+{
+    FILE *f = fopen(MENU_CONFIG, "r");
+    char line[256];
+    int in_audio = 0;
+    if (!f) return;
+    while (fgets(line, sizeof line, f)) {
+        int v = 0;
+        if (line[0] == '[') { in_audio = strncmp(line, "[audio]", 7) == 0; continue; }
+        if (in_audio && sscanf(line, " effects_volume %d", &v) == 1)
+            cabinet_volume = v < 0 ? 0 : v > 100 ? 100 : v;
+    }
+    fclose(f);
+}
+
+int snd_cabinet_volume(void) { return cabinet_volume; }
+
 void snd_init(vp_audio *a)
 {
     A = a;
+    read_cabinet_volume();
     if (!a) return;
     size_t rn = 0;
     unsigned char *rom = getenv("VT_SYNTH_SOUNDS") ? NULL : find_rom(&rn);
