@@ -1,4 +1,6 @@
 build*/
+# the VectorPie SDK, cloned next to CMakeLists.txt (see README.md)
+external/
 assets/sounds/
 *.vpk
 *.zip

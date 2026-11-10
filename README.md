@@ -96,7 +96,8 @@ joystick always work in it, whatever the bindings.
 * **CONTROLS** – every action, its two inputs, CLEAR (back to the
   cabinet's), RESET ALL TO THE CABINET.
 * **INPUT TEST** – every action lights up while held.
-* **SOUND** – volume, a sound test, and whether the original ROM was found.
+* **SOUND** – volume, a sound test, whether the original ROM was found, and
+  the cabinet's own sound volume (see below).
 * **RESET HIGH SCORES**, **RESET ALL SETTINGS** (each asks for a second press).
 
 Everything takes effect at once and is kept in `save/settings.txt` next to
@@ -138,8 +139,15 @@ in code.
 `vt-sounds [robotron.zip] [folder]` writes all the original sounds as WAV
 files, to listen to or to edit.
 
+**Volume**: the service menu's VOLUME (0–10) is the game's own. On the
+cabinet the VectorPie menu's SOUND VOLUME (Settings → AUDIO) applies on top
+of it, as it does to every game built with SDK 0.9.0 or newer; the SOUND
+page shows that level too. On a PC there is no menu and the cabinet level
+is full.
+
 **Your own sounds**: any sound can be replaced by a file
-`assets/sounds/<name>.wav` (or `.ogg`) next to the executable, `<name>` one of
+`assets/sounds/<name>.wav` or `.ogg` (Ogg Vorbis) next to the executable,
+`<name>` one of
 
 `shot grunt_die electrode_die hulk_hit rescue human_die prog_make brain_die
 cruise spheroid_die enforcer_birth enforcer_shot enforcer_die quark_die
@@ -152,18 +160,27 @@ is ignored by git.)
 
 ## Building
 
-As any VectorPie game, from WSL2 Debian trixie after the SDK's
+Vectortron needs the [VectorPie SDK](https://github.com/Goldfinch2/VectorPie)
+0.9.0 or newer. The simplest way is a clone of it next to `CMakeLists.txt`,
+which the build picks up by itself (the folder is ignored by git):
+
+```sh
+git clone https://github.com/Goldfinch2/VectorPie.git external/VectorPie
+```
+
+Then, as any VectorPie game, from WSL2 Debian trixie after the SDK's
 `tools/setup-wsl.sh`:
 
 ```sh
 cmake --preset pc    && cmake --build --preset pc     # Windows: build-pc/vectortron.exe
 cmake --preset pi    && cmake --build --preset pi     # the cabinet: build-pi/vectortron
-cmake --build --preset pi --target vpk                # build-pi/vectortron-0.1.0.vpk
+cmake --build --preset pi --target vpk                # build-pi/vectortron-<version>.vpk
 ```
 
 The SDK is taken from `-DVECTORPIE_SDK_DIR=<VectorPie>/sdk` (its source
-tree), else the installed SDK (`~/VectorPie/dist/<pc|pi>`), else it is
-fetched from GitHub. On Linux directly: `cmake --preset linux && cmake --build --preset linux`.
+tree), else `external/VectorPie/sdk`, else the installed SDK
+(`~/VectorPie/dist/<pc|pi>`), else it is fetched from GitHub. On Linux
+directly: `cmake --preset linux && cmake --build --preset linux`.
 
 Copy the `.vpk` to a USB drive's `games/` folder (or to
 `/persistent/games/packages/`) and install it from the menu: Settings →
