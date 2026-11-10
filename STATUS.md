@@ -24,7 +24,9 @@ Vectortron, taken from https://github.com/endprodukt/vectortron (branch
 - Replacement sounds may be Ogg Vorbis as well as WAV (`assets/sounds/
   <name>.ogg`); the game already tried `.ogg`, the old SDK refused it.
 - `README.md`, `RESUME.md` and this file in English.
-- Not yet played on the cabinet.
+- GitHub release `v0.1.3` (2026-11-10) with `vectortron-0.1.3.vpk`, merged
+  into `ccr-9894316f-dbxip2` (PR 1). Not on the cabinet, not in the Drive
+  folder `games` yet.
 
 ## Done (2026-10-16)
 
